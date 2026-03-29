@@ -966,8 +966,8 @@
     font-size: 14px;
     font-weight: 300;
   }
-
-
+  .cal-day.full-day .cal-dot { background: #BBB !important; }
+  .cal-day.full-day { color: #CCC; cursor: not-allowed; }
   .proc-step {
     background: white;
     border: 1px solid var(--border);
@@ -1451,7 +1451,7 @@ function renderCalendar() {
     if(isSelected) cls += ' selected';
     if(isToday) cls += ' today-mark';
 
-    const clickable = avail && !isPast;
+    const clickable = avail && !isPast && !isFull;
     const dotColor = isFull ? 'full' : (avail ? 'available' : '');
     const dotHtml = dotColor ? `<span class="cal-dot ${dotColor}"></span>` : '';
     const countHtml = avail ? `<span class="cal-count">${remaining}/${slots.length}</span>` : '';
