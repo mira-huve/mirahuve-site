@@ -1443,8 +1443,8 @@ function renderCalendar() {
 
     let cls = 'cal-day';
     if(isPast || !selectedService) cls += ' past';
-    else if(!avail && !isFull) cls += ' unavailable';
-    else if(isFull) cls += ' has-slots';
+    else if(isFull) cls += ' has-slots full-day';
+    else if(!avail) cls += ' unavailable';
     else cls += ' has-slots';
     if(isSun && !isPast) cls += ' sun-day';
     if(isSat && !isPast) cls += ' sat-day';
