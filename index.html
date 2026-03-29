@@ -966,8 +966,8 @@
     font-size: 14px;
     font-weight: 300;
   }
-  .cal-day.full-day .cal-dot { background: #BBB !important; }
-  .cal-day.full-day { color: #CCC; cursor: not-allowed; }
+
+
   .proc-step {
     background: white;
     border: 1px solid var(--border);
@@ -1200,7 +1200,7 @@
             </svg>
           </div>
           <h2 class="done-title">예약이 접수되었습니다</h2>
-          <p class="done-desc">빠른 시간 내에 확인 후 연락드리겠습니다.<br>문의: mira@mirahuve.com</p>
+          <p class="done-desc">빠른 시간 내에 확인 후 연락드리겠습니다.<br>문의: <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="b8d5d1cad9f8d5d1cad9d0cdcedd96dbd7d5">[email&#160;protected]</a></p>
           <div class="done-ref" id="done-ref"></div>
           <br>
           <button class="back-btn" onclick="resetBooking()">새 예약 신청하기</button>
@@ -1216,7 +1216,7 @@
   <p style="font-size:12px;color:#6B5F80;font-weight:300;letter-spacing:0.08em;margin-bottom:16px;">MIRA Human Love</p>
   <p style="font-size:12px;color:#9B90AA;font-weight:300;line-height:1.8;">
     <strong style="color:var(--dark-text);font-weight:500;">지금 바로 당신의 강점을 발견하세요</strong><br>
-    문의 · mira@mirahuve.com
+    문의 · <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="a0cdc9d2c1e0cdc9d2c1c8d5d6c58ec3cfcd">[email&#160;protected]</a>
   </p>
   <p style="font-size:11px;color:#C5BDCF;margin-top:20px;font-weight:300;letter-spacing:0.05em;">© 2024 MIRA HUVE. All rights reserved.</p>
 </footer>
@@ -1327,11 +1327,31 @@
   <div class="detail-panel" id="detail-panel"></div>
 </div>
 
-<script>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+// ── Supabase 설정 ──
+const SUPABASE_URL = 'https://ilcgpjxzlaoeuzmezvft.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlsY2dwanh6bGFvZXV6bWV6dmZ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4MDg3OTYsImV4cCI6MjA5MDM4NDc5Nn0.f35B2aiyHD00qJgfFCGaqLHWSe4jMY8Gw2QtiEVWHOc';
+
+const sb = {
+  headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
+  async get(table, params='') {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}${params}`, { headers: this.headers });
+    return r.json();
+  },
+  async post(table, body) {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, { method:'POST', headers: this.headers, body: JSON.stringify(body) });
+    return r.json();
+  },
+  async patch(table, filter, body) {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${filter}`, { method:'PATCH', headers: this.headers, body: JSON.stringify(body) });
+    return r.json();
+  }
+};
+
 // ── 데이터 ──
 const ADMIN_PW = 'mirahuve2024';
-let bookings = JSON.parse(localStorage.getItem('mh_bookings') || '[]');
-let timeConfig = JSON.parse(localStorage.getItem('mh_timeconfig') || 'null') || {
+let bookings = [];
+let timeConfig = {
   personal: ['09:00','10:00','11:00','13:00','14:00','15:00','16:00','17:00'],
   team: ['14:00','15:00','16:00']
 };
@@ -1346,10 +1366,25 @@ const todayStr = today.toISOString().split('T')[0];
 const ALL_SLOTS_PERSONAL = ['09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00'];
 const ALL_SLOTS_TEAM = ['09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00'];
 
-function saveBookings() { localStorage.setItem('mh_bookings', JSON.stringify(bookings)); }
-function saveTimeConfig() {
-  localStorage.setItem('mh_timeconfig', JSON.stringify(timeConfig));
-  showToast('시간 설정이 저장되었습니다.');
+// ── DB 로드 ──
+async function loadData() {
+  try {
+    const [bData, tData] = await Promise.all([
+      sb.get('bookings', '?order=created_at.desc'),
+      sb.get('time_config', '?id=eq.1')
+    ]);
+    if(Array.isArray(bData)) bookings = bData;
+    if(Array.isArray(tData) && tData[0]) timeConfig = { personal: tData[0].personal, team: tData[0].team };
+  } catch(e) { console.error('DB 로드 실패', e); }
+}
+
+async function saveBookings() { /* Supabase에서 직접 저장 — 사용 안 함 */ }
+
+async function saveTimeConfig() {
+  try {
+    await sb.patch('time_config', 'id=eq.1', { personal: timeConfig.personal, team: timeConfig.team });
+    showToast('시간 설정이 저장되었습니다.');
+  } catch(e) { showToast('저장 실패. 다시 시도해주세요.'); }
 }
 
 // ── 페이지 전환 ──
@@ -1362,10 +1397,11 @@ function goAdmin() { showPage('page-login'); document.getElementById('admin-pw')
 function logout() { showPage('page-booking'); }
 
 // ── 로그인 ──
-function checkLogin() {
+async function checkLogin() {
   const pw = document.getElementById('admin-pw').value;
   if(pw === ADMIN_PW) {
     showPage('page-admin');
+    await loadData();
     renderStats();
     renderTable();
     renderTimeConfig();
@@ -1375,7 +1411,7 @@ function checkLogin() {
 }
 
 // ── 서비스 선택 ──
-function selectService(type) {
+async function selectService(type) {
   selectedService = type;
   selectedTime = null;
   selectedDate = null;
@@ -1384,6 +1420,17 @@ function selectService(type) {
   document.getElementById('step-datetime').style.display = 'block';
   document.getElementById('done-section').style.display = 'none';
   document.getElementById('mode-wrap').style.display = type === 'personal' ? 'block' : 'none';
+
+  // 예약 현황 로드 (캘린더 가용 날짜 계산용)
+  try {
+    const [bData, tData] = await Promise.all([
+      sb.get('bookings', '?select=date,time,service,status'),
+      sb.get('time_config', '?id=eq.1')
+    ]);
+    if(Array.isArray(bData)) bookings = bData;
+    if(Array.isArray(tData) && tData[0]) timeConfig = { personal: tData[0].personal, team: tData[0].team };
+  } catch(e) {}
+
   renderCalendar();
   renderTimeGrid(null);
 }
@@ -1443,15 +1490,15 @@ function renderCalendar() {
 
     let cls = 'cal-day';
     if(isPast || !selectedService) cls += ' past';
-    else if(isFull) cls += ' has-slots full-day';
-    else if(!avail) cls += ' unavailable';
+    else if(!avail && !isFull) cls += ' unavailable';
+    else if(isFull) cls += ' has-slots';
     else cls += ' has-slots';
     if(isSun && !isPast) cls += ' sun-day';
     if(isSat && !isPast) cls += ' sat-day';
     if(isSelected) cls += ' selected';
     if(isToday) cls += ' today-mark';
 
-    const clickable = avail && !isPast && !isFull;
+    const clickable = avail && !isPast;
     const dotColor = isFull ? 'full' : (avail ? 'available' : '');
     const dotHtml = dotColor ? `<span class="cal-dot ${dotColor}"></span>` : '';
     const countHtml = avail ? `<span class="cal-count">${remaining}/${slots.length}</span>` : '';
@@ -1516,7 +1563,7 @@ function setMode(m) {
 }
 
 // ── 예약 제출 ──
-function submitBooking() {
+async function submitBooking() {
   const name = document.getElementById('input-name').value.trim();
   const tel = document.getElementById('input-tel').value.trim();
   const email = document.getElementById('input-email').value.trim();
@@ -1529,6 +1576,10 @@ function submitBooking() {
   if(!tel) return showToast('연락처를 입력해주세요.');
   if(!email) return showToast('이메일을 입력해주세요.');
 
+  const btn = document.querySelector('.submit-btn');
+  btn.disabled = true;
+  btn.textContent = '접수 중...';
+
   const id = 'MH' + Date.now().toString().slice(-6);
   const booking = {
     id, name, tel, email, purpose,
@@ -1536,17 +1587,27 @@ function submitBooking() {
     date: selectedDate, time: selectedTime,
     mode: selectedService === 'personal' ? selectedMode : 'face',
     status: 'pending',
-    memo: '',
-    createdAt: new Date().toISOString()
+    memo: ''
   };
-  bookings.push(booking);
-  saveBookings();
 
-  document.getElementById('step-datetime').style.display = 'none';
-  document.querySelectorAll('.service-card').forEach(c => c.classList.remove('selected'));
-  document.getElementById('done-section').style.display = 'block';
-  document.getElementById('done-ref').textContent = '예약번호 ' + id;
-  selectedService = null; selectedTime = null; selectedDate = null;
+  try {
+    const result = await sb.post('bookings', booking);
+    if(result && !result.error) {
+      bookings.push(booking);
+      document.getElementById('step-datetime').style.display = 'none';
+      document.querySelectorAll('.service-card').forEach(c => c.classList.remove('selected'));
+      document.getElementById('done-section').style.display = 'block';
+      document.getElementById('done-ref').textContent = '예약번호 ' + id;
+      selectedService = null; selectedTime = null; selectedDate = null;
+    } else {
+      showToast('접수 중 오류가 발생했습니다. 다시 시도해주세요.');
+    }
+  } catch(e) {
+    showToast('네트워크 오류. 다시 시도해주세요.');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '예약 신청하기';
+  }
 }
 
 function resetBooking() {
@@ -1589,7 +1650,7 @@ function renderTable() {
   const serviceF = document.getElementById('filter-service').value;
   const searchF = document.getElementById('filter-search').value.toLowerCase();
 
-  let list = [...bookings].sort((a,b)=>b.createdAt.localeCompare(a.createdAt));
+  let list = [...bookings].sort((a,b)=>(b.created_at||'').localeCompare(a.created_at||''));
   if(statusF) list = list.filter(b=>b.status===statusF);
   if(serviceF) list = list.filter(b=>b.service===serviceF);
   if(searchF) list = list.filter(b=>b.name.includes(searchF)||b.tel.includes(searchF));
@@ -1659,15 +1720,18 @@ function openDetail(id) {
 
 
 // ── 어드민: 승인 + 이메일 안내문 ──
-function approveAndEmail() {
+async function approveAndEmail() {
   const b = bookings.find(x=>x.id===currentDetailId);
   if(!b) return;
 
-  b.status = 'confirmed';
-  b.memo = document.getElementById('detail-memo').value || b.memo;
-  saveBookings();
-  renderStats();
-  renderTable();
+  const newMemo = document.getElementById('detail-memo').value || b.memo;
+  try {
+    await sb.patch('bookings', `id=eq.${currentDetailId}`, { status: 'confirmed', memo: newMemo });
+    b.status = 'confirmed';
+    b.memo = newMemo;
+    renderStats();
+    renderTable();
+  } catch(e) { showToast('저장 실패. 다시 시도해주세요.'); return; }
 
   const svcName = b.service === 'personal' ? '개인상담 1:1 맞춤 코칭 (60분)' : '팀 워크샵 (2시간)';
   const price = b.service === 'personal' ? '150,000원' : '1,000,000원';
@@ -1732,16 +1796,20 @@ function showEmailModal(body) {
 
 function closeDetail() { document.getElementById('detail-overlay').classList.remove('open'); }
 
-function saveDetail() {
+async function saveDetail() {
   const b = bookings.find(x=>x.id===currentDetailId);
   if(!b) return;
-  b.status = document.getElementById('detail-status').value;
-  b.memo = document.getElementById('detail-memo').value;
-  saveBookings();
-  renderStats();
-  renderTable();
-  closeDetail();
-  showToast('저장되었습니다.');
+  const newStatus = document.getElementById('detail-status').value;
+  const newMemo = document.getElementById('detail-memo').value;
+  try {
+    await sb.patch('bookings', `id=eq.${currentDetailId}`, { status: newStatus, memo: newMemo });
+    b.status = newStatus;
+    b.memo = newMemo;
+    renderStats();
+    renderTable();
+    closeDetail();
+    showToast('저장되었습니다.');
+  } catch(e) { showToast('저장 실패. 다시 시도해주세요.'); }
 }
 
 // ── 어드민: 시간 설정 ──
@@ -1763,20 +1831,4 @@ function toggleSlot(el) {
   const type = el.dataset.type;
   const t = el.dataset.time;
   if(el.classList.contains('on')) {
-    if(!timeConfig[type].includes(t)) timeConfig[type].push(t);
-  } else {
-    timeConfig[type] = timeConfig[type].filter(x=>x!==t);
-  }
-}
-
-// ── 토스트 ──
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2500);
-}
-// 초기화 완료
-</script>
-</body>
-</html>
+    if(!timeConfig[type].includes(t)) timeC
