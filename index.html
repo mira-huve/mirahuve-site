@@ -1491,10 +1491,14 @@ function renderTimeGrid(dateStr) {
     .filter(b => b.date===dateStr && b.service===selectedService && b.status!=='cancelled')
     .map(b => b.time);
 
+  const nowStr = today.toTimeString().slice(0,5);
+  const isToday = dateStr === todayStr;
   grid.innerHTML = slots.sort().map(t => {
-    const busy = taken.includes(t);
-    const sel = t === selectedTime ? ' selected' : '';
-    return `<div class="time-btn${busy?' disabled':''}${sel}" onclick="selectTimeBtn(this,'${t}',${busy})">${t}</div>`;
+const busy = taken.includes(t);
+const isPastTime = isToday && t <= nowStr;
+const disabled = busy || isPastTime;
+const sel = t === selectedTime ? ' selected' : '';
+return `<div class="time-btn${disabled?' disabled':''}${sel}" onclick="selectTimeBtn(this,'${t}',${disabled})">${t}</div>`;
   }).join('');
 }
 
@@ -1648,7 +1652,7 @@ function openDetail(id) {
 
   // 대기 상태일 때만 승인 버튼 노출
   const approveBtn = document.getElementById('approve-btn');
-  if(approveBtn && b.status === 'pending') approveBtn.style.display = 'block';
+  if(approveBtn && (b.status === 'pending' || b.status === 'confirmed')) approveBtn.style.display = 'block';
 
   document.getElementById('detail-overlay').classList.add('open');
 }
@@ -1765,7 +1769,13 @@ function toggleSlot(el) {
   }
 }
 
-//  
+// ── 토스트 ──
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
 // 초기화 완료
 </script>
 </body>
