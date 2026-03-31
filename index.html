@@ -1420,20 +1420,16 @@ function selectService(type) {
   document.getElementById('step-datetime').style.display = 'block';
   document.getElementById('done-section').style.display = 'none';
   document.getElementById('mode-wrap').style.display = type === 'personal' ? 'block' : 'none';
-  // DOM 업데이트 후 달력 렌더링 보장
   setTimeout(function() {
     renderCalendar();
     renderTimeGrid(null);
-  }, 10);
-  // 백그라운드 DB 로드 후 달력 갱신
+  }, 50);
   Promise.all([
     sb.get('bookings', '?select=date,time,service,status'),
     sb.get('time_config', '?id=eq.1')
-  ]).then(function(results) {
-    var bData = results[0];
-    var tData = results[1];
-    if(Array.isArray(bData)) bookings = bData;
-    if(Array.isArray(tData) && tData[0]) timeConfig = { personal: tData[0].personal, team: tData[0].team };
+  ]).then(function(r) {
+    if(Array.isArray(r[0])) bookings = r[0];
+    if(Array.isArray(r[1]) && r[1][0]) timeConfig = { personal: r[1][0].personal, team: r[1][0].team };
     renderCalendar();
   }).catch(function() {});
 }
