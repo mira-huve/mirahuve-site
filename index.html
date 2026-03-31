@@ -1411,28 +1411,27 @@ async function checkLogin() {
 }
 
 // ── 서비스 선택 ──
-async function selectService(type) {
+function selectService(type) {
   selectedService = type;
   selectedTime = null;
   selectedDate = null;
-  document.querySelectorAll('.service-card').forEach(c => c.classList.remove('selected'));
-  document.getElementById('card-' + type).classList.add('selected');
-  document.getElementById('step-datetime').style.display = 'block';
-  document.getElementById('done-section').style.display = 'none';
-  document.getElementById('mode-wrap').style.display = type === 'personal' ? 'block' : 'none';
-
-  // 예약 현황 로드 (캘린더 가용 날짜 계산용)
-  try {
-    const [bData, tData] = await Promise.all([
-      sb.get('bookings', '?select=date,time,service,status'),
-      sb.get('time_config', '?id=eq.1')
-    ]);
-    if(Array.isArray(bData)) bookings = bData;
-    if(Array.isArray(tData) && tData[0]) timeConfig = { personal: tData[0].personal, team: tData[0].team };
-  } catch(e) {}
-
+  document.querySelectorAll(".service-card").forEach(c => c.classList.remove("selected"));
+  document.getElementById("card-" + type).classList.add("selected");
+  document.getElementById("step-datetime").style.display = "block";
+  document.getElementById("done-section").style.display = "none";
+  document.getElementById("mode-wrap").style.display = type === "personal" ? "block" : "none";
   renderCalendar();
   renderTimeGrid(null);
+  Promise.all([
+    sb.get("bookings", "?select=date,time,service,status"),
+    sb.get("time_config", "?id=eq.1")
+  ]).then(function(results) {
+    var bData = results[0];
+    var tData = results[1];
+    if(Array.isArray(bData)) bookings = bData;
+    if(Array.isArray(tData) && tData[0]) timeConfig = { personal: tData[0].personal, team: tData[0].team };
+    renderCalendar();
+  }).catch(function() {});
 }
 
 // ── 캘린더 ──
