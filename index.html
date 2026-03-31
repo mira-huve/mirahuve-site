@@ -1429,15 +1429,11 @@ async function selectService(type) {
     ]);
     if(Array.isArray(bData)) bookings = bData;
     if(Array.isArray(tData) && tData[0]) timeConfig = { personal: tData[0].personal, team: tData[0].team };
-  } catch(e) {
-    console.error('데이터 로드 실패', e);
-  }
+  } catch(e) {}
 
   renderCalendar();
   renderTimeGrid(null);
 }
-renderCalendar()와 renderTimeGrid(null)을 try 블록 밖으로 뺀 게 핵심이에요. DB 호출 성공 여부와 상관없이 달력은 항상 표시됩니다.
-수정 후 Commit 해주세요!
 
 // ── 캘린더 ──
 let calYear = today.getFullYear();
