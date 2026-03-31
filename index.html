@@ -1415,16 +1415,20 @@ function selectService(type) {
   selectedService = type;
   selectedTime = null;
   selectedDate = null;
-  document.querySelectorAll(".service-card").forEach(c => c.classList.remove("selected"));
-  document.getElementById("card-" + type).classList.add("selected");
-  document.getElementById("step-datetime").style.display = "block";
-  document.getElementById("done-section").style.display = "none";
-  document.getElementById("mode-wrap").style.display = type === "personal" ? "block" : "none";
-  renderCalendar();
-  renderTimeGrid(null);
+  document.querySelectorAll('.service-card').forEach(c => c.classList.remove('selected'));
+  document.getElementById('card-' + type).classList.add('selected');
+  document.getElementById('step-datetime').style.display = 'block';
+  document.getElementById('done-section').style.display = 'none';
+  document.getElementById('mode-wrap').style.display = type === 'personal' ? 'block' : 'none';
+  // DOM 업데이트 후 달력 렌더링 보장
+  setTimeout(function() {
+    renderCalendar();
+    renderTimeGrid(null);
+  }, 10);
+  // 백그라운드 DB 로드 후 달력 갱신
   Promise.all([
-    sb.get("bookings", "?select=date,time,service,status"),
-    sb.get("time_config", "?id=eq.1")
+    sb.get('bookings', '?select=date,time,service,status'),
+    sb.get('time_config', '?id=eq.1')
   ]).then(function(results) {
     var bData = results[0];
     var tData = results[1];
