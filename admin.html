@@ -376,7 +376,8 @@ function buildConfirmEmailBody(b) {
 }
 
 function sendEmail(to, subject, body) {
-  window.open('mailto:' + encodeURIComponent(to) + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body), '_blank');
+  const gmailUrl = 'https://mail.google.com/mail/?view=cm&to=' + encodeURIComponent(to) + '&su=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+  window.open(gmailUrl, '_blank');
 }
 
 function closeModal() { document.getElementById('emailModal').classList.remove('show'); cachedBookings = []; }
