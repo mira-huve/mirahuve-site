@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MIRA HUVE — 예약 관리</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --deep-purple: #3C2964;
+  --deep-purple-light: #5A3F8A;
+  --dark-purple: #1A1028;
+  --lavender: #E8E0F5;
+  --lavender-soft: #F3EEF9;
+  --ivory: #FAF8F2;
+  --gold: #C9A96E;
+  --gold-dark: #A8894F;
+  --text-on-dark: #FAF8F2;
+  --text-on-light: #1A1028;
+  --text-muted: #6B5E7A;
+  --font-display: 'Cormorant Garamond', serif;
+  --font-body: 'Noto Sans KR', sans-serif;
+  --success: #4A8B6E; --success-bg: #EDF5F0;
+  --warning: #C9A96E; --warning-bg: #FDF8EE;
+  --danger: #9B4D4D; --danger-bg: #F8EDED;
+  --transition: 0.3s ease;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; -webkit-font-smoothing: antialiased; }
+body { font-family: var(--font-body); font-weight: 300; color: var(--text-on-light); background: #F0ECE3; line-height: 1.6; min-height: 100vh; }
+a { text-decoration: none; color: inherit; }
+
+.admin-header { background: var(--deep-purple); color: var(--text-on-dark); padding: 1rem 2rem; display: flex; align-items: center; justify-content: space-between; }
+.admin-logo { font-family: var(--font-display); font-size: 1.25rem; font-weight: 600; letter-spacing: 0.08em; display: flex; align-items: center; }
+.admin-logo small { font-weight: 400; font-size: 0.7rem; letter-spacing: 0.15em; opacity: 0.6; text-transform: uppercase; margin-left: 0.75rem; }
+.admin-back { font-size: 0.875rem; color: rgba(250,248,242,0.7); transition: color var(--transition); }
+.admin-back:hover { color: var(--text-on-dark); }
+.admin-body { max-width: 1200px; margin: 0 auto; padding: 2rem; }
+
+/* Login */
+.login-overlay { position: fixed; inset: 0; background: #F0ECE3; z-index: 9999; display: flex; align-items: center; justify-content: center; }
+.login-box { background: white; border-radius: 4px; padding: 3rem; max-width: 380px; width: 90%; text-align: center; border: 1px solid rgba(60,41,100,0.06); box-shadow: 0 8px 32px rgba(60,41,100,0.08); }
+.login-title { font-family: var(--font-display); font-size: 1.5rem; font-weight: 600; color: var(--deep-purple); margin-bottom: 0.5rem; }
+.login-sub { font-size: 0.875rem; color: var(--text-muted); margin-bottom: 1.5rem; }
+.login-input { width: 100%; padding: 0.875rem 1rem; font-family: var(--font-body); font-size: 0.9375rem; border: 1px solid rgba(60,41,100,0.12); border-radius: 2px; outline: none; background: var(--ivory); margin-bottom: 1rem; text-align: center; }
+.login-input:focus { border-color: var(--deep-purple); }
+.login-btn { width: 100%; padding: 0.875rem; background: var(--deep-purple); color: var(--text-on-dark); font-family: var(--font-body); font-size: 0.9375rem; font-weight: 500; border: none; border-radius: 2px; cursor: pointer; transition: background var(--transition); }
+.login-btn:hover { background: var(--deep-purple-light); }
+.login-error { color: var(--danger); font-size: 0.8125rem; margin-top: 0.75rem; display: none; }
+
+/* Tabs */
+.tabs { display: flex; gap: 0; margin-bottom: 2rem; border-bottom: 2px solid rgba(60,41,100,0.1); }
+.tab { padding: 0.875rem 1.5rem; font-size: 0.9375rem; font-weight: 400; color: var(--text-muted); background: none; border: none; cursor: pointer; position: relative; transition: color var(--transition); }
+.tab:hover { color: var(--deep-purple); }
+.tab.active { color: var(--deep-purple); font-weight: 500; }
+.tab.active::after { content: ''; position: absolute; bottom: -2px; left: 0; right: 0; height: 2px; background: var(--deep-purple); }
+.tab-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; border-radius: 10px; background: var(--gold); color: var(--dark-purple); font-size: 0.6875rem; font-weight: 700; margin-left: 0.5rem; padding: 0 6px; }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* Stats */
+.stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2rem; }
+.stat-card { background: white; border-radius: 4px; padding: 1.25rem 1.5rem; border: 1px solid rgba(60,41,100,0.06); }
+.stat-label { font-size: 0.75rem; color: var(--text-muted); letter-spacing: 0.05em; margin-bottom: 0.25rem; }
+.stat-value { font-family: var(--font-display); font-size: 1.75rem; font-weight: 600; color: var(--deep-purple); }
+
+/* Filter */
+.filter-bar { display: flex; gap: 0.75rem; margin-bottom: 1.5rem; flex-wrap: wrap; align-items: center; }
+.filter-select, .filter-input { padding: 0.625rem 1rem; font-family: var(--font-body); font-size: 0.875rem; font-weight: 300; color: var(--text-on-light); background: white; border: 1px solid rgba(60,41,100,0.12); border-radius: 2px; outline: none; transition: border-color var(--transition); }
+.filter-select:focus, .filter-input:focus { border-color: var(--deep-purple); }
+.filter-select { appearance: none; padding-right: 2rem; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236B5E7A' fill='none' stroke-width='1.5'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 0.75rem center; cursor: pointer; }
+
+/* Table */
+.booking-table { width: 100%; background: white; border-radius: 4px; border: 1px solid rgba(60,41,100,0.06); overflow: hidden; }
+.booking-table table { width: 100%; border-collapse: collapse; }
+.booking-table th { text-align: left; padding: 0.875rem 1rem; font-size: 0.75rem; font-weight: 500; color: var(--text-muted); letter-spacing: 0.05em; text-transform: uppercase; background: var(--ivory); border-bottom: 1px solid rgba(60,41,100,0.08); }
+.booking-table td { padding: 1rem; font-size: 0.875rem; border-bottom: 1px solid rgba(60,41,100,0.04); vertical-align: top; }
+.booking-table tr:last-child td { border-bottom: none; }
+.booking-table tr:hover td { background: rgba(60,41,100,0.015); }
+.booking-name { font-weight: 500; color: var(--deep-purple); margin-bottom: 0.125rem; }
+.booking-contact { font-size: 0.8125rem; color: var(--text-muted); }
+.booking-service-tag { font-size: 0.75rem; font-weight: 500; padding: 0.2rem 0.5rem; border-radius: 2px; background: var(--lavender-soft); color: var(--deep-purple); white-space: nowrap; }
+
+.status-badge { display: inline-block; font-size: 0.75rem; font-weight: 500; padding: 0.25rem 0.625rem; border-radius: 2px; }
+.status-pending { background: var(--warning-bg); color: var(--gold-dark); }
+.status-confirmed { background: var(--success-bg); color: var(--success); }
+.status-cancelled { background: var(--danger-bg); color: var(--danger); }
+.status-completed { background: var(--lavender-soft); color: var(--deep-purple); }
+
+.action-btn { padding: 0.375rem 0.75rem; font-family: var(--font-body); font-size: 0.75rem; font-weight: 500; border: 1px solid; border-radius: 2px; cursor: pointer; transition: var(--transition); background: white; margin-right: 0.375rem; margin-bottom: 0.375rem; }
+.action-confirm { border-color: var(--success); color: var(--success); }
+.action-confirm:hover { background: var(--success); color: white; }
+.action-cancel { border-color: var(--danger); color: var(--danger); }
+.action-cancel:hover { background: var(--danger); color: white; }
+.action-complete { border-color: var(--deep-purple); color: var(--deep-purple); }
+.action-complete:hover { background: var(--deep-purple); color: white; }
+.action-email { border-color: var(--gold-dark); color: var(--gold-dark); }
+.action-email:hover { background: var(--gold-dark); color: white; }
+
+.memo-input { width: 100%; padding: 0.5rem; font-family: var(--font-body); font-size: 0.8125rem; font-weight: 300; border: 1px solid rgba(60,41,100,0.1); border-radius: 2px; outline: none; margin-top: 0.375rem; resize: vertical; min-height: 36px; background: var(--ivory); transition: border-color var(--transition); }
+.memo-input:focus { border-color: var(--deep-purple); }
+.empty-state { text-align: center; padding: 3rem; color: var(--text-muted); font-size: 0.9375rem; }
+
+/* Block tab */
+.block-layout { display: grid; grid-template-columns: 300px 1fr; gap: 2rem; align-items: start; }
+.block-form { background: white; border-radius: 4px; padding: 1.5rem; border: 1px solid rgba(60,41,100,0.06); }
+.block-form-title { font-family: var(--font-display); font-size: 1.125rem; font-weight: 600; color: var(--deep-purple); margin-bottom: 1rem; }
+.block-form-group { margin-bottom: 1rem; }
+.block-form-label { display: block; font-size: 0.8125rem; font-weight: 500; color: var(--deep-purple); margin-bottom: 0.375rem; }
+.block-form-input { width: 100%; padding: 0.625rem 0.75rem; font-family: var(--font-body); font-size: 0.875rem; font-weight: 300; border: 1px solid rgba(60,41,100,0.12); border-radius: 2px; outline: none; background: var(--ivory); }
+.block-form-input:focus { border-color: var(--deep-purple); }
+.block-time-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.375rem; margin-top: 0.5rem; }
+.block-time-btn { padding: 0.5rem; text-align: center; font-size: 0.8125rem; color: var(--text-muted); background: var(--ivory); border: 1px solid rgba(60,41,100,0.1); border-radius: 2px; cursor: pointer; transition: var(--transition); }
+.block-time-btn:hover { border-color: var(--deep-purple); color: var(--deep-purple); }
+.block-time-btn.blocked { background: var(--danger-bg); color: var(--danger); border-color: var(--danger); }
+.block-add-btn { width: 100%; padding: 0.75rem; background: var(--deep-purple); color: var(--text-on-dark); font-family: var(--font-body); font-size: 0.875rem; font-weight: 500; border: none; border-radius: 2px; cursor: pointer; transition: background var(--transition); margin-top: 0.5rem; }
+.block-add-btn:hover { background: var(--deep-purple-light); }
+.blocked-list { background: white; border-radius: 4px; border: 1px solid rgba(60,41,100,0.06); overflow: hidden; }
+.blocked-list-header { padding: 1rem 1.5rem; font-family: var(--font-display); font-size: 1.125rem; font-weight: 600; color: var(--deep-purple); background: var(--ivory); border-bottom: 1px solid rgba(60,41,100,0.08); }
+.blocked-item { display: flex; align-items: center; justify-content: space-between; padding: 0.875rem 1.5rem; border-bottom: 1px solid rgba(60,41,100,0.04); font-size: 0.875rem; }
+.blocked-item:last-child { border-bottom: none; }
+.blocked-item-info { color: var(--text-muted); }
+.blocked-item-info strong { color: var(--deep-purple); font-weight: 500; }
+.blocked-remove { padding: 0.25rem 0.625rem; font-size: 0.75rem; color: var(--danger); background: none; border: 1px solid var(--danger); border-radius: 2px; cursor: pointer; font-family: var(--font-body); transition: var(--transition); }
+.blocked-remove:hover { background: var(--danger); color: white; }
+
+/* Modal */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(26,16,40,0.5); z-index: 1000; align-items: center; justify-content: center; }
+.modal-overlay.show { display: flex; }
+.modal { background: white; border-radius: 4px; padding: 2rem; max-width: 560px; width: 90%; max-height: 90vh; overflow-y: auto; }
+.modal-title { font-family: var(--font-display); font-size: 1.375rem; font-weight: 600; color: var(--deep-purple); margin-bottom: 1rem; }
+.modal-body { font-size: 0.9375rem; color: var(--text-muted); line-height: 1.7; margin-bottom: 1.5rem; }
+.modal-body strong { color: var(--deep-purple); font-weight: 500; }
+.modal-email-preview { background: var(--ivory); border-radius: 4px; padding: 1.25rem; font-size: 0.875rem; line-height: 1.7; margin-top: 1rem; color: var(--text-on-light); }
+.modal-email-preview .email-field { font-size: 0.8125rem; color: var(--text-muted); margin-bottom: 0.25rem; }
+.modal-actions { display: flex; gap: 0.75rem; justify-content: flex-end; }
+.modal-btn { padding: 0.75rem 1.5rem; font-family: var(--font-body); font-size: 0.875rem; font-weight: 500; border-radius: 2px; cursor: pointer; border: none; transition: var(--transition); }
+.modal-btn-primary { background: var(--deep-purple); color: var(--text-on-dark); }
+.modal-btn-primary:hover { background: var(--deep-purple-light); }
+.modal-btn-secondary { background: none; color: var(--text-muted); border: 1px solid rgba(60,41,100,0.15); }
+.modal-btn-secondary:hover { border-color: var(--deep-purple); color: var(--deep-purple); }
+
+@media (max-width: 900px) {
+  .stats-row { grid-template-columns: repeat(2, 1fr); }
+  .block-layout { grid-template-columns: 1fr; }
+  .booking-table { overflow-x: auto; }
+  .booking-table table { min-width: 700px; }
+}
+@media (max-width: 640px) {
+  .admin-body { padding: 1rem; }
+  .stats-row { grid-template-columns: 1fr; }
+  .filter-bar { flex-direction: column; }
+}
+</style>
+</head>
+<body>
+
+<!-- Login -->
+<div class="login-overlay" id="loginOverlay">
+  <div class="login-box">
+    <h2 class="login-title">MIRA HUVE Admin</h2>
+    <p class="login-sub">관리자 비밀번호를 입력해주세요.</p>
+    <input type="password" class="login-input" id="loginPw" placeholder="비밀번호" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="login-btn" onclick="doLogin()">로그인</button>
+    <p class="login-error" id="loginError">비밀번호가 올바르지 않습니다.</p>
+  </div>
+</div>
+
+<header class="admin-header">
+  <div class="admin-logo">MIRA HUVE <small>Admin</small></div>
+  <a href="index.html" class="admin-back">← 홈으로 돌아가기</a>
+</header>
+
+<div class="admin-body" id="adminBody" style="display:none;">
+  <div class="tabs">
+    <button class="tab active" data-tab="bookings">예약 관리 <span class="tab-badge" id="pendingCount">0</span></button>
+    <button class="tab" data-tab="schedule">시간 차단 관리</button>
+  </div>
+
+  <div class="tab-panel active" id="panel-bookings">
+    <div class="stats-row" id="statsRow"></div>
+    <div class="filter-bar">
+      <select class="filter-select" id="filterStatus"><option value="all">전체 상태</option><option value="pending">대기중</option><option value="confirmed">확정</option><option value="completed">완료</option><option value="cancelled">취소</option></select>
+      <select class="filter-select" id="filterService"><option value="all">전체 서비스</option><option value="individual">개인 상담</option><option value="youth">청소년·학부모</option><option value="team">팀 워크숍</option></select>
+      <input type="text" class="filter-input" id="filterSearch" placeholder="이름 또는 연락처 검색">
+    </div>
+    <div class="booking-table" id="bookingTableWrap">
+      <table><thead><tr><th>고객 정보</th><th>서비스</th><th>일시</th><th>상태</th><th>메모 / 상담 목적</th><th>액션</th></tr></thead><tbody id="bookingTbody"></tbody></table>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="panel-schedule">
+    <div class="block-layout">
+      <div class="block-form">
+        <h3 class="block-form-title">시간 차단 추가</h3>
+        <div class="block-form-group"><label class="block-form-label">날짜</label><input type="date" class="block-form-input" id="blockDate"></div>
+        <div class="block-form-group"><label class="block-form-label">차단할 시간 (클릭하여 선택)</label><div class="block-time-grid" id="blockTimeGrid"></div></div>
+        <button class="block-add-btn" onclick="addBlockedSlots()">선택한 시간 차단하기</button>
+      </div>
+      <div class="blocked-list"><div class="blocked-list-header">차단된 시간 목록</div><div id="blockedListBody"></div></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="emailModal">
+  <div class="modal">
+    <h3 class="modal-title" id="modalTitle">예약 확정 및 이메일 발송</h3>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-actions">
+      <button class="modal-btn modal-btn-secondary" onclick="closeModal()">취소</button>
+      <button class="modal-btn modal-btn-primary" id="modalConfirmBtn">확정 및 이메일 발송</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── Login ───
+const ADMIN_PW = 'mirahuve2024';
+function doLogin() {
+  const pw = document.getElementById('loginPw').value;
+  if (pw === ADMIN_PW) {
+    document.getElementById('loginOverlay').style.display = 'none';
+    document.getElementById('adminBody').style.display = 'block';
+    renderAll();
+  } else {
+    document.getElementById('loginError').style.display = 'block';
+  }
+}
+
+// ─── Supabase ───
+const SUPABASE_URL = 'https://ilcgpjxzlaoeuzmezvft.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlsY2dwanh6bGFvZXV6bWV6dmZ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4MDg3OTYsImV4cCI6MjA5MDM4NDc5Nn0.f35B2aiyHD00qJgfFCGaqLHWSe4jMY8Gw2QtiEVWHOc';
+
+async function supaFetch(table, method, body, query) {
+  const url = SUPABASE_URL + '/rest/v1/' + table + (query || '');
+  const headers = {
+    'apikey': SUPABASE_KEY,
+    'Authorization': 'Bearer ' + SUPABASE_KEY,
+    'Content-Type': 'application/json'
+  };
+  if (method === 'POST') headers['Prefer'] = 'return=representation';
+  if (method === 'PATCH') headers['Prefer'] = 'return=representation';
+  const opts = { method, headers };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(url, opts);
+  if (!res.ok) { console.error('Supabase:', res.status); return null; }
+  if (method === 'DELETE') return true;
+  return res.json();
+}
+
+const SERVICE_NAMES = { individual: '개인 상담', youth: '청소년·학부모', team: '팀 워크숍' };
+const STATUS_LABELS = { pending: '대기중', confirmed: '확정', completed: '완료', cancelled: '취소' };
+const dayNames = ['일','월','화','수','목','금','토'];
+
+function formatDate(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  return d.getFullYear() + '.' + String(d.getMonth()+1).padStart(2,'0') + '.' + String(d.getDate()).padStart(2,'0') + ' (' + dayNames[d.getDay()] + ')';
+}
+function escapeHtml(str) { const d = document.createElement('div'); d.textContent = str || ''; return d.innerHTML; }
+
+// ─── Tabs ───
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
+  });
+});
+
+// ─── Stats & Bookings ───
+async function renderStats() {
+  const bookings = await supaFetch('bookings', 'GET', null, '?select=status') || [];
+  const pending = bookings.filter(b => b.status === 'pending').length;
+  const confirmed = bookings.filter(b => b.status === 'confirmed').length;
+  const completed = bookings.filter(b => b.status === 'completed').length;
+  document.getElementById('pendingCount').textContent = pending;
+  document.getElementById('statsRow').innerHTML =
+    '<div class="stat-card"><div class="stat-label">전체 예약</div><div class="stat-value">' + bookings.length + '</div></div>' +
+    '<div class="stat-card"><div class="stat-label">대기중</div><div class="stat-value">' + pending + '</div></div>' +
+    '<div class="stat-card"><div class="stat-label">확정</div><div class="stat-value">' + confirmed + '</div></div>' +
+    '<div class="stat-card"><div class="stat-label">완료</div><div class="stat-value">' + completed + '</div></div>';
+}
+
+async function renderBookings() {
+  let query = '?order=created_at.desc';
+  const sf = document.getElementById('filterStatus').value;
+  const svf = document.getElementById('filterService').value;
+  if (sf !== 'all') query += '&status=eq.' + sf;
+  if (svf !== 'all') query += '&service=eq.' + svf;
+  const search = document.getElementById('filterSearch').value.toLowerCase();
+
+  let bookings = await supaFetch('bookings', 'GET', null, query + '&select=*') || [];
+  if (search) bookings = bookings.filter(b => b.name.toLowerCase().includes(search) || b.phone.includes(search));
+
+  const tbody = document.getElementById('bookingTbody');
+  if (bookings.length === 0) { tbody.innerHTML = '<tr><td colspan="6" class="empty-state">표시할 예약이 없습니다.</td></tr>'; return; }
+
+  tbody.innerHTML = bookings.map(b => {
+    return '<tr>' +
+      '<td><div class="booking-name">' + escapeHtml(b.name) + '</div><div class="booking-contact">' + escapeHtml(b.phone) + '<br>' + escapeHtml(b.email) + '</div></td>' +
+      '<td><span class="booking-service-tag">' + (SERVICE_NAMES[b.service] || b.service_name) + '</span></td>' +
+      '<td>' + formatDate(b.date) + '<br>' + b.time + '</td>' +
+      '<td><span class="status-badge status-' + b.status + '">' + STATUS_LABELS[b.status] + '</span></td>' +
+      '<td>' + (b.purpose ? '<div style="font-size:0.8125rem;color:var(--text-muted);margin-bottom:0.375rem;">' + escapeHtml(b.purpose) + '</div>' : '') +
+        '<textarea class="memo-input" placeholder="메모 입력..." onchange="updateMemo(\'' + b.id + '\', this.value)">' + escapeHtml(b.memo) + '</textarea></td>' +
+      '<td>' + buildActions(b) + '</td></tr>';
+  }).join('');
+}
+
+function buildActions(b) {
+  let h = '';
+  if (b.status === 'pending') {
+    h += '<button class="action-btn action-confirm" onclick="openConfirmModal(\'' + b.id + '\')">확정</button>';
+    h += '<button class="action-btn action-cancel" onclick="updateStatus(\'' + b.id + '\', \'cancelled\')">취소</button>';
+  }
+  if (b.status === 'confirmed') {
+    h += '<button class="action-btn action-complete" onclick="updateStatus(\'' + b.id + '\', \'completed\')">완료</button>';
+    h += '<button class="action-btn action-email" onclick="openEmailModal(\'' + b.id + '\')">메일 발송</button>';
+    h += '<button class="action-btn action-cancel" onclick="updateStatus(\'' + b.id + '\', \'cancelled\')">취소</button>';
+  }
+  if (b.status === 'cancelled') h += '<button class="action-btn action-confirm" onclick="updateStatus(\'' + b.id + '\', \'pending\')">복원</button>';
+  if (b.status === 'completed') h += '<span style="font-size:0.8125rem;color:var(--text-muted);">완료됨</span>';
+  return h;
+}
+
+async function updateStatus(id, status) {
+  await supaFetch('bookings', 'PATCH', { status }, '?id=eq.' + id);
+  renderAll();
+}
+
+async function updateMemo(id, memo) {
+  await supaFetch('bookings', 'PATCH', { memo }, '?id=eq.' + id);
+}
+
+// ─── Modal ───
+let cachedBookings = [];
+async function getCachedBooking(id) {
+  if (cachedBookings.length === 0) cachedBookings = await supaFetch('bookings', 'GET', null, '?select=*') || [];
+  return cachedBookings.find(x => x.id === id);
+}
+
+async function openConfirmModal(id) {
+  const b = await getCachedBooking(id);
+  if (!b) return;
+  const emailBody = buildConfirmEmailBody(b);
+  document.getElementById('modalTitle').textContent = '예약 확정 및 이메일 발송';
+  document.getElementById('modalBody').innerHTML =
+    '<strong>' + escapeHtml(b.name) + '</strong>님의 예약을 확정하고 안내 이메일을 발송합니다.' +
+    '<div class="modal-email-preview"><div class="email-field">받는 사람: ' + escapeHtml(b.email) + '</div><div class="email-field">제목: [MIRA HUVE] 상담 예약이 확정되었습니다</div><hr style="border:none;border-top:1px solid rgba(60,41,100,0.08);margin:0.75rem 0;">' + escapeHtml(emailBody).replace(/\n/g, '<br>') + '</div>';
+  const btn = document.getElementById('modalConfirmBtn');
+  btn.textContent = '확정 및 이메일 발송';
+  btn.onclick = async () => { await updateStatus(id, 'confirmed'); sendEmail(b.email, '[MIRA HUVE] 상담 예약이 확정되었습니다', emailBody); closeModal(); };
+  document.getElementById('emailModal').classList.add('show');
+}
+
+async function openEmailModal(id) {
+  const b = await getCachedBooking(id);
+  if (!b) return;
+  const emailBody = buildConfirmEmailBody(b);
+  document.getElementById('modalTitle').textContent = '이메일 발송';
+  document.getElementById('modalBody').innerHTML =
+    '<strong>' + escapeHtml(b.name) + '</strong>님에게 안내 이메일을 발송합니다.' +
+    '<div class="modal-email-preview"><div class="email-field">받는 사람: ' + escapeHtml(b.email) + '</div><div class="email-field">제목: [MIRA HUVE] 상담 예약 안내</div><hr style="border:none;border-top:1px solid rgba(60,41,100,0.08);margin:0.75rem 0;">' + escapeHtml(emailBody).replace(/\n/g, '<br>') + '</div>';
+  const btn = document.getElementById('modalConfirmBtn');
+  btn.textContent = '이메일 발송';
+  btn.onclick = () => { sendEmail(b.email, '[MIRA HUVE] 상담 예약 안내', emailBody); closeModal(); };
+  document.getElementById('emailModal').classList.add('show');
+}
+
+function buildConfirmEmailBody(b) {
+  const svcName = SERVICE_NAMES[b.service] || b.service_name;
+  return b.name + '님, 안녕하세요.\nMIRA HUVE입니다.\n\n상담 예약이 확정되었습니다.\n\n서비스: ' + svcName + '\n일시: ' + formatDate(b.date) + ' ' + b.time + '\n금액: ' + b.price + '\n\n아래 계좌로 상담료를 입금해 주세요.\n(계좌 정보는 별도 안내)\n\n입금 확인 후 Gallup 강점 테스트 코드를 보내드립니다.\n테스트는 방해받지 않는 30~40분이 필요하며,\n상담일 전까지 완료해 주세요.\n\n감사합니다.\nMIRA HUVE 드림';
+}
+
+function sendEmail(to, subject, body) {
+  window.open('mailto:' + encodeURIComponent(to) + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body), '_blank');
+}
+
+function closeModal() { document.getElementById('emailModal').classList.remove('show'); cachedBookings = []; }
+document.getElementById('emailModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(); });
+
+// ─── Block ───
+let selectedBlockTimes = new Set();
+document.getElementById('blockDate').addEventListener('change', () => { selectedBlockTimes.clear(); renderBlockTimeGrid(); });
+
+async function renderBlockTimeGrid() {
+  const dateVal = document.getElementById('blockDate').value;
+  const grid = document.getElementById('blockTimeGrid');
+  if (!dateVal) { grid.innerHTML = '<p style="font-size:0.8125rem;color:var(--text-muted);grid-column:1/-1;">날짜를 먼저 선택하세요.</p>'; return; }
+
+  const blocked = await supaFetch('blocked_slots', 'GET', null, '?date=eq.' + dateVal + '&select=time') || [];
+  const blockedSet = new Set(blocked.map(b => b.time));
+  grid.innerHTML = '';
+
+  for (let h = 9; h <= 20; h++) {
+    const label = String(h).padStart(2, '0') + ':00';
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'block-time-btn';
+    btn.textContent = label;
+    if (blockedSet.has(label)) { btn.classList.add('blocked'); btn.title = '이미 차단됨'; }
+    else {
+      if (selectedBlockTimes.has(label)) btn.classList.add('blocked');
+      btn.addEventListener('click', () => {
+        if (selectedBlockTimes.has(label)) { selectedBlockTimes.delete(label); btn.classList.remove('blocked'); }
+        else { selectedBlockTimes.add(label); btn.classList.add('blocked'); }
+      });
+    }
+    grid.appendChild(btn);
+  }
+}
+
+async function addBlockedSlots() {
+  const dateVal = document.getElementById('blockDate').value;
+  if (!dateVal) { alert('날짜를 선택해주세요.'); return; }
+  if (selectedBlockTimes.size === 0) { alert('차단할 시간을 선택해주세요.'); return; }
+  const rows = [...selectedBlockTimes].map(time => ({ date: dateVal, time }));
+  await supaFetch('blocked_slots', 'POST', rows);
+  selectedBlockTimes.clear();
+  renderBlockTimeGrid();
+  renderBlockedList();
+}
+
+async function renderBlockedList() {
+  const blocked = await supaFetch('blocked_slots', 'GET', null, '?order=date.asc,time.asc&select=*') || [];
+  const container = document.getElementById('blockedListBody');
+  if (blocked.length === 0) { container.innerHTML = '<div class="empty-state">차단된 시간이 없습니다.</div>'; return; }
+  container.innerHTML = blocked.map(b =>
+    '<div class="blocked-item"><div class="blocked-item-info"><strong>' + formatDate(b.date) + '</strong> ' + b.time + '</div>' +
+    '<button class="blocked-remove" onclick="removeBlock(' + b.id + ')">해제</button></div>'
+  ).join('');
+}
+
+async function removeBlock(id) {
+  await supaFetch('blocked_slots', 'DELETE', null, '?id=eq.' + id);
+  renderBlockTimeGrid();
+  renderBlockedList();
+}
+
+// ─── Filters ───
+document.getElementById('filterStatus').addEventListener('change', renderBookings);
+document.getElementById('filterService').addEventListener('change', renderBookings);
+document.getElementById('filterSearch').addEventListener('input', renderBookings);
+
+// ─── Init ───
+async function renderAll() { await renderStats(); await renderBookings(); await renderBlockedList(); renderBlockTimeGrid(); }
+
+const blockDateInput = document.getElementById('blockDate');
+blockDateInput.min = new Date().toISOString().split('T')[0];
+</script>
+</body>
+</html>
