@@ -66,12 +66,11 @@ function priceFor(serviceKey, hasReport){
 const db = {
   async uploadReport(file){
     if(!CONFIGURED) throw new Error('NOT_CONFIGURED');
-    const safe = file.name.normalize('NFC').replace(/[^\w.\-가-힣]/g,'_');
-    const path = `${Date.now()}_${safe}`;
-    const { error } = await sbClient.storage.from('reports').upload(path, file, { upsert:false });
-    if(error) throw error;
-    return path;
-  },
+const ext = (file.name.split('.').pop()||'dat').replace(/[^a-zA-Z0-9]/g,'').toLowerCase(); const safe = `report.${ext}`;
+     const path = `${Date.now()}_${safe}`;
+const { error } = await sbClient.storage.from('reports').upload(path, file, { upsert:false });
+if(error) throw error;
+        return path;},
   async reportSignedUrl(path){
     const { data, error } = await sbClient.storage.from('reports').createSignedUrl(path, 3600);
     if(error) throw error;
