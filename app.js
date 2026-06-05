@@ -3,8 +3,43 @@
    설정(아래 두 줄)만 채우면 예약/어드민이 작동합니다.
    ========================================================= */
 const SUPABASE_URL = 'https://ilcgpjxzlaoeuzmezvft.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlsY2dwanh6bGFvZXV6bWV6dmZ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4MDg3OTYsImV4cCI6MjA5MDM4NDc5Nn0.f35B2aiyHD00qJgfFCGaqLHWSe4jMY8Gw2QtiEVWHOc'; // Supabase → Settings → API → anon public
+const SUPABASE_ANON_KEY = '여기에_anon_public_키를_붙여넣으세요'; // Supabase → Settings → API → anon public
 const ADMIN_PASSWORD = 'mirahuve2026';
+
+/* ---- 결제 (PortOne V2) ----
+   포트원 심사 통과 후, 콘솔에서 받은 값으로 채우고 PAYMENT_ENABLED 를 true 로 바꾸세요.
+   그 전까지는 false 라서 결제 없이 기존처럼 예약만 접수됩니다(라이브 영향 없음). */
+const PAYMENT_ENABLED = false;
+const PORTONE_STORE_ID = 'store-여기에_상점식별코드';
+const PORTONE_CHANNELS = {
+  kakaopay: 'channel-key-여기에_카카오페이_채널키',
+  naverpay: 'channel-key-여기에_네이버페이_채널키'
+};
+const SUBMIT_LABEL = PAYMENT_ENABLED ? '결제하고 예약 신청하기' : '예약 신청하기';
+
+function genPaymentId(){ return 'mh_' + Date.now() + '_' + Math.random().toString(36).slice(2,8); }
+
+/* 결제창 호출 (성공 시 {paymentId} 반환, 실패/취소 시 throw) */
+async function requestPortonePayment({ amount, orderName, method, customer }){
+  const channelKey = PORTONE_CHANNELS[method];
+  if(!window.PortOne) throw new Error('PORTONE_SDK_MISSING');
+  if(!channelKey || channelKey.includes('여기에')) throw new Error('CHANNEL_NOT_SET');
+  const paymentId = genPaymentId();
+  const res = await window.PortOne.requestPayment({
+    storeId: PORTONE_STORE_ID,
+    channelKey,
+    paymentId,
+    orderName,
+    totalAmount: amount,
+    currency: 'KRW',
+    payMethod: 'EASY_PAY',
+    easyPay: { easyPayProvider: method==='kakaopay' ? 'KAKAOPAY' : 'NAVERPAY' },
+    customer: { fullName: customer.name, phoneNumber: customer.phone, email: customer.email },
+    redirectUrl: location.origin + location.pathname
+  });
+  if(res && res.code != null) throw new Error(res.message || 'PAY_CANCELLED'); // 취소/실패
+  return { paymentId: (res && res.paymentId) || paymentId };
+}
 
 /* ---- Supabase 연결 ---- */
 const CONFIGURED = !SUPABASE_ANON_KEY.includes('붙여넣으세요');
@@ -66,11 +101,13 @@ function priceFor(serviceKey, hasReport){
 const db = {
   async uploadReport(file){
     if(!CONFIGURED) throw new Error('NOT_CONFIGURED');
-const ext = (file.name.split('.').pop()||'dat').replace(/[^a-zA-Z0-9]/g,'').toLowerCase(); const safe = `report.${ext}`;
-     const path = `${Date.now()}_${safe}`;
-const { error } = await sbClient.storage.from('reports').upload(path, file, { upsert:false });
-if(error) throw error;
-        return path;},
+    const ext = (file.name.split('.').pop()||'dat').replace(/[^a-zA-Z0-9]/g,'').toLowerCase();
+    const safe = `report.${ext}`;
+    const path = `${Date.now()}_${safe}`;
+    const { error } = await sbClient.storage.from('reports').upload(path, file, { upsert:false });
+    if(error) throw error;
+    return path;
+  },
   async reportSignedUrl(path){
     const { data, error } = await sbClient.storage.from('reports').createSignedUrl(path, 3600);
     if(error) throw error;
@@ -171,6 +208,12 @@ function initBooking(){
   $('#bReportFile').addEventListener('change', updatePricePreview);
 
   $('#bookingForm').addEventListener('submit', submitBooking);
+
+  // 결제 활성화 시 결제수단 선택 노출 + 버튼 문구
+  if(PAYMENT_ENABLED){
+    const pw=$('#payMethodWrap'); if(pw) pw.hidden=false;
+    const sb=$('#submitBtn'); if(sb) sb.textContent=SUBMIT_LABEL;
+  }
 }
 
 /* 선택된 서비스·결과지 여부에 따른 금액 미리보기 */
@@ -286,15 +329,39 @@ async function submitBooking(ev){
 
   const btn = $('#submitBtn'); btn.disabled=true; btn.textContent='접수 중…';
   try{
+    // 0) 결제 (활성화된 경우에만)
+    if(PAYMENT_ENABLED){
+      btn.textContent='결제 진행 중…';
+      try{
+        const method = $('#payMethod') ? $('#payMethod').value : 'kakaopay';
+        const pay = await requestPortonePayment({
+          amount: final, orderName: svc.label, method,
+          customer: { name: row.customer_name, phone: row.customer_phone, email: row.customer_email }
+        });
+        row.payment_id = pay.paymentId;
+        row.pay_method = method;
+        row.payment_status = 'paid'; // ⚠ 서버 검증 전 상태. 추후 Edge Function 검증 연동 필요.
+      }catch(pe){
+        btn.disabled=false; btn.textContent=SUBMIT_LABEL;
+        if(pe.message==='CHANNEL_NOT_SET' || pe.message==='PORTONE_SDK_MISSING'){
+          return fail(msg,'결제 설정이 아직 완료되지 않았습니다. 잠시 후 다시 시도해 주세요.');
+        }
+        return fail(msg,'결제가 취소되었거나 완료되지 않았습니다. 다시 시도해 주세요.');
+      }
+    }
+    // 1) 결과지 업로드 (결제 성공 후)
     if(wantReport && file){
       btn.textContent='결과지 업로드 중…';
       row.report_path = await db.uploadReport(file);
     }
+    // 2) 예약 저장
     await db.createBooking(row);
     msg.className='form-msg ok';
-    msg.textContent = rate > 0
-      ? `예약이 접수되었습니다. 결과지 확인 후 40% 할인된 ${won(final)}으로 안내드릴게요. 감사합니다.`
-      : '예약이 접수되었습니다. 확정 안내 메일을 곧 보내드릴게요. 감사합니다.';
+    msg.textContent = PAYMENT_ENABLED
+      ? `결제가 완료되어 예약이 접수되었습니다. 확정 안내 메일을 곧 보내드릴게요. 감사합니다.`
+      : (rate > 0
+        ? `예약이 접수되었습니다. 결과지 확인 후 40% 할인된 ${won(final)}으로 안내드릴게요. 감사합니다.`
+        : '예약이 접수되었습니다. 확정 안내 메일을 곧 보내드릴게요. 감사합니다.');
     $('#bookingForm').reset();
     $('#reportUploadWrap').hidden = true;
     $('#pricePreview').hidden = true;
@@ -311,7 +378,7 @@ async function submitBooking(ev){
       fail(msg,'접수 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.');
       console.error(err);
     }
-  }finally{ btn.disabled=false; btn.textContent='예약 신청하기'; }
+  }finally{ btn.disabled=false; btn.textContent=SUBMIT_LABEL; }
 }
 function fail(el,t){ el.className='form-msg err'; el.textContent=t; }
 
@@ -485,10 +552,13 @@ function bookingCard(b){
 /* 결제 금액 줄 (어드민) */
 function priceRow(b){
   if(b.final_price == null && b.base_price == null) return '';
+  const paidTag = b.payment_status==='paid'
+    ? ` · <span style="color:#1a7a4a;font-weight:600;">결제완료${b.pay_method?'('+(b.pay_method==='kakaopay'?'카카오페이':b.pay_method==='naverpay'?'네이버페이':b.pay_method)+')':''}</span>`
+    : '';
   if(b.discount_rate > 0){
-    return `<div class="bk-price">💳 <strong>${won(b.final_price)}</strong> <span class="bk-strike">${won(b.base_price)}</span> · 결과지 40% 할인${b.report_path?' · 결과지 첨부됨':''}</div>`;
+    return `<div class="bk-price">💳 <strong>${won(b.final_price)}</strong> <span class="bk-strike">${won(b.base_price)}</span> · 결과지 40% 할인${b.report_path?' · 결과지 첨부됨':''}${paidTag}</div>`;
   }
-  return `<div class="bk-price">💳 ${won(b.final_price!=null?b.final_price:b.base_price)}</div>`;
+  return `<div class="bk-price">💳 ${won(b.final_price!=null?b.final_price:b.base_price)}${paidTag}</div>`;
 }
 
 function flash(btn,t){ const o=btn.textContent; btn.textContent=t; setTimeout(()=>btn.textContent=o,1200); }
