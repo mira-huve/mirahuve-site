@@ -3,37 +3,32 @@
    설정(아래 두 줄)만 채우면 예약/어드민이 작동합니다.
    ========================================================= */
 const SUPABASE_URL = 'https://ilcgpjxzlaoeuzmezvft.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlsY2dwanh6bGFvZXV6bWV6dmZ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4MDg3OTYsImV4cCI6MjA5MDM4NDc5Nn0.f35B2aiyHD00qJgfFCGaqLHWSe4jMY8Gw2QtiEVWHOc'; // Supabase → Settings → API → anon public
+const SUPABASE_ANON_KEY = '여기에_anon_public_키를_붙여넣으세요'; // Supabase → Settings → API → anon public
 const ADMIN_PASSWORD = 'mirahuve2026';
 
 /* ---- 결제 (PortOne V2) ----
-   포트원 심사 통과 후, 콘솔에서 받은 값으로 채우고 PAYMENT_ENABLED 를 true 로 바꾸세요.
-   그 전까지는 false 라서 결제 없이 기존처럼 예약만 접수됩니다(라이브 영향 없음). */
-const PAYMENT_ENABLED = false;
-const PORTONE_STORE_ID = 'store-여기에_상점식별코드';
-const PORTONE_CHANNELS = {
-  kakaopay: 'channel-key-여기에_카카오페이_채널키',
-  naverpay: 'channel-key-여기에_네이버페이_채널키'
-};
+   KG이니시스 V2 테스트 채널 연동. 테스트 결제는 매일 23:00~23:50 자동취소됩니다.
+   실연동 전환 시 PORTONE_CHANNEL_KEY 를 실연동 채널 키로 교체하세요. */
+const PAYMENT_ENABLED = true;
+const PORTONE_STORE_ID = 'store-bd5de6ee-17d5-4b4d-a7c5-18c8fc1d54db';
+const PORTONE_CHANNEL_KEY = 'channel-key-dea2b7a1-2f26-43fa-89cb-c80042eeb450'; // KG이니시스 테스트
 const SUBMIT_LABEL = PAYMENT_ENABLED ? '결제하고 예약 신청하기' : '예약 신청하기';
 
 function genPaymentId(){ return 'mh_' + Date.now() + '_' + Math.random().toString(36).slice(2,8); }
 
 /* 결제창 호출 (성공 시 {paymentId} 반환, 실패/취소 시 throw) */
-async function requestPortonePayment({ amount, orderName, method, customer }){
-  const channelKey = PORTONE_CHANNELS[method];
+async function requestPortonePayment({ amount, orderName, customer }){
   if(!window.PortOne) throw new Error('PORTONE_SDK_MISSING');
-  if(!channelKey || channelKey.includes('여기에')) throw new Error('CHANNEL_NOT_SET');
+  if(!PORTONE_CHANNEL_KEY || PORTONE_CHANNEL_KEY.includes('여기에')) throw new Error('CHANNEL_NOT_SET');
   const paymentId = genPaymentId();
   const res = await window.PortOne.requestPayment({
     storeId: PORTONE_STORE_ID,
-    channelKey,
+    channelKey: PORTONE_CHANNEL_KEY,
     paymentId,
     orderName,
     totalAmount: amount,
-    currency: 'KRW',
-    payMethod: 'EASY_PAY',
-    easyPay: { easyPayProvider: method==='kakaopay' ? 'KAKAOPAY' : 'NAVERPAY' },
+    currency: 'CURRENCY_KRW',
+    payMethod: 'CARD',
     customer: { fullName: customer.name, phoneNumber: customer.phone, email: customer.email },
     redirectUrl: location.origin + location.pathname
   });
@@ -209,9 +204,8 @@ function initBooking(){
 
   $('#bookingForm').addEventListener('submit', submitBooking);
 
-  // 결제 활성화 시 결제수단 선택 노출 + 버튼 문구
+  // 결제 활성화 시 버튼 문구 변경 (이니시스 결제창 안에서 카드 선택)
   if(PAYMENT_ENABLED){
-    const pw=$('#payMethodWrap'); if(pw) pw.hidden=false;
     const sb=$('#submitBtn'); if(sb) sb.textContent=SUBMIT_LABEL;
   }
 }
@@ -333,13 +327,12 @@ async function submitBooking(ev){
     if(PAYMENT_ENABLED){
       btn.textContent='결제 진행 중…';
       try{
-        const method = $('#payMethod') ? $('#payMethod').value : 'kakaopay';
         const pay = await requestPortonePayment({
-          amount: final, orderName: svc.label, method,
+          amount: final, orderName: svc.label,
           customer: { name: row.customer_name, phone: row.customer_phone, email: row.customer_email }
         });
         row.payment_id = pay.paymentId;
-        row.pay_method = method;
+        row.pay_method = 'card';
         row.payment_status = 'paid'; // ⚠ 서버 검증 전 상태. 추후 Edge Function 검증 연동 필요.
       }catch(pe){
         btn.disabled=false; btn.textContent=SUBMIT_LABEL;
@@ -553,7 +546,7 @@ function bookingCard(b){
 function priceRow(b){
   if(b.final_price == null && b.base_price == null) return '';
   const paidTag = b.payment_status==='paid'
-    ? ` · <span style="color:#1a7a4a;font-weight:600;">결제완료${b.pay_method?'('+(b.pay_method==='kakaopay'?'카카오페이':b.pay_method==='naverpay'?'네이버페이':b.pay_method)+')':''}</span>`
+    ? ` · <span style="color:#1a7a4a;font-weight:600;">결제완료${b.pay_method?'('+({card:'카드',kakaopay:'카카오페이',naverpay:'네이버페이'}[b.pay_method]||b.pay_method)+')':''}</span>`
     : '';
   if(b.discount_rate > 0){
     return `<div class="bk-price">💳 <strong>${won(b.final_price)}</strong> <span class="bk-strike">${won(b.base_price)}</span> · 결과지 40% 할인${b.report_path?' · 결과지 첨부됨':''}${paidTag}</div>`;
