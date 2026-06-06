@@ -3,7 +3,7 @@
    설정(아래 두 줄)만 채우면 예약/어드민이 작동합니다.
    ========================================================= */
 const SUPABASE_URL = 'https://ilcgpjxzlaoeuzmezvft.supabase.co';
-const SUPABASE_ANON_KEY = '여기에_anon_public_키를_붙여넣으세요'; // Supabase → Settings → API → anon public
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlsY2dwanh6bGFvZXV6bWV6dmZ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4MDg3OTYsImV4cCI6MjA5MDM4NDc5Nn0.f35B2aiyHD00qJgfFCGaqLHWSe4jMY8Gw2QtiEVWHOc'; // Supabase → Settings → API → anon public
 const ADMIN_PASSWORD = 'mirahuve2026';
 
 /* ---- 결제 (PortOne V2) ----
