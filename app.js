@@ -4,7 +4,7 @@
    ========================================================= */
 const SUPABASE_URL = 'https://ilcgpjxzlaoeuzmezvft.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlsY2dwanh6bGFvZXV6bWV6dmZ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4MDg3OTYsImV4cCI6MjA5MDM4NDc5Nn0.f35B2aiyHD00qJgfFCGaqLHWSe4jMY8Gw2QtiEVWHOc'; // Supabase → Settings → API → anon public
-const ADMIN_PASSWORD = 'mirahuve2026';
+/* 어드민 인증은 Supabase Auth(이메일 로그인) + RLS로 처리합니다. 클라이언트 평문 비밀번호는 제거되었습니다. */
 
 /* ---- 결제 (PortOne V2) ----
    KG이니시스 V2 테스트 채널 연동. 테스트 결제는 매일 23:00~23:50 자동취소됩니다.
@@ -45,16 +45,19 @@ if (CONFIGURED && window.supabase) {
 
 /* ---- 서비스·슬롯 규칙 ---- */
 const SERVICES = {
-  individual: { key:'individual', label:'개인 상담', dur:60,  price:150000, weekendOnly:true,
-    slots:['09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00'] },
-  youth:      { key:'youth',      label:'청소년·학부모 상담', dur:90, price:280000, weekendOnly:true,
-    slots:['09:00','10:30','12:00','13:30','15:00','16:30','18:00'] },
+  individual: { key:'individual', label:'개인 상담', dur:60,  price:150000, weekendOnly:false,
+    slots:['09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00'] },
+  youth:      { key:'youth',      label:'청소년·학부모 상담', dur:90, price:280000, weekendOnly:false,
+    slots:['09:00','10:30','12:00','13:30','15:00','16:30','18:00','20:00'] },
   team:       { key:'team',       label:'팀 워크숍', dur:120, price:1000000, weekendOnly:false, noReportDiscount:true,
     slots:['09:00','11:00','13:00','15:00'] },
-  couple:     { key:'couple',     label:'연인·부부 상담', dur:90, price:250000, weekendOnly:true,
-    slots:['09:00','10:30','12:00','13:30','15:00','16:30','18:00'] }
+  couple:     { key:'couple',     label:'연인·부부 상담', dur:90, price:250000, weekendOnly:false,
+    slots:['09:00','10:30','12:00','13:30','15:00','16:30','18:00','20:00'] }
 };
 const REPORT_DISCOUNT = 40; // 결과지 업로드 시 할인율(%)
+/* 예약 가능기간 — 오늘부터 MIN_LEAD_DAYS 뒤 ~ WINDOW_DAYS 이내에서만 예약 가능 */
+const BOOKING_MIN_LEAD_DAYS = 2;   // 상담 24h 전 테스트 완료 필요 → 최소 2일 뒤부터
+const BOOKING_WINDOW_DAYS   = 90;  // 이니시스 계약조건 기준 90일 이내
 const DOW = ['일','월','화','수','목','금','토'];
 const STATUS_LABEL = { pending:'대기', confirmed:'확정', completed:'완료', cancelled:'취소' };
 
@@ -69,6 +72,10 @@ const todayStr = () => { const d=new Date(); return `${d.getFullYear()}-${String
 const won = n => (Number(n)||0).toLocaleString('ko-KR') + '원';
 const dateStr = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 const timeStr = d => `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+/* 오늘 기준 N일 뒤 날짜 문자열(YYYY-MM-DD) */
+const offsetDateStr = days => { const d=new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate()+days); return dateStr(d); };
+const minBookDate = () => offsetDateStr(BOOKING_MIN_LEAD_DAYS);
+const maxBookDate = () => offsetDateStr(BOOKING_WINDOW_DAYS);
 
 /* 취소 마감(상담-24h) & 자동취소 */
 const CANCEL_LEAD_MS = 24*3600*1000;
@@ -110,9 +117,10 @@ const db = {
   },
   async createBooking(row){
     if(!CONFIGURED) throw new Error('NOT_CONFIGURED');
-    const { data, error } = await sbClient.from('bookings').insert([row]).select();
+    // .select() 없이 INSERT만 — 익명(anon)은 bookings 읽기 권한이 없으므로 반환 표현을 요구하지 않는다
+    const { error } = await sbClient.from('bookings').insert([row]);
     if(error) throw error;
-    return data[0];
+    return true;
   },
   async listBookings(){
     if(!CONFIGURED) return [];
@@ -122,8 +130,8 @@ const db = {
   },
   async bookingsOnDate(date){
     if(!CONFIGURED) return [];
-    const { data } = await sbClient.from('bookings')
-      .select('booking_time,duration_min,status').eq('booking_date',date).neq('status','cancelled');
+    // 개인정보 없이 '해당 날짜의 예약된 시간대'만 반환하는 함수(RPC). anon도 실행 가능하나 고객 정보는 노출되지 않는다.
+    const { data } = await sbClient.rpc('slots_on_date', { d: date });
     return data||[];
   },
   async customerHistory(email){
@@ -178,7 +186,8 @@ const state = { service:null, date:null, time:null };
 
 function initBooking(){
   const dateInput = $('#bDate');
-  dateInput.min = todayStr();
+  dateInput.min = minBookDate();
+  dateInput.max = maxBookDate();
 
   // 서비스 카드(상단) → 폼으로 스크롤 + 선택
   $$('.btn-card').forEach(btn=>{
@@ -238,10 +247,61 @@ function selectService(key){
   $$('#servicePick .pick').forEach(p=> p.classList.toggle('active', p.dataset.service===key));
   const svc = SERVICES[key];
   $('#dateHint').textContent = svc.weekendOnly
-    ? '주말(토·일)만 예약 가능합니다.'
-    : '평일·주말 모두 예약 가능합니다.';
+    ? `주말(토·일) · 예약일로부터 ${BOOKING_WINDOW_DAYS}일 이내에서 선택해 주세요.`
+    : `오늘로부터 ${BOOKING_MIN_LEAD_DAYS}일 뒤 ~ ${BOOKING_WINDOW_DAYS}일 이내에서 선택해 주세요.`;
   if(state.date) renderSlots();
   updatePricePreview();
+}
+
+/* 날짜별 예약·차단 현황 캐시 (짧은 TTL — 재선택 시 즉시 표시) */
+const slotCache = new Map();       // date -> { at, bookings, blocks }
+const SLOT_CACHE_TTL = 30000;      // 30초
+async function fetchAvailability(date){
+  const hit = slotCache.get(date);
+  if(hit && (Date.now() - hit.at) < SLOT_CACHE_TTL) return hit;
+  // 예약 조회·차단 조회를 병렬로 실행 (순차 왕복 → 1회 왕복)
+  const [bookings, blocks] = await Promise.all([
+    db.bookingsOnDate(date).catch(()=>[]),
+    db.blocksOnDate(date).catch(()=>[])
+  ]);
+  const entry = { at: Date.now(), bookings, blocks };
+  slotCache.set(date, entry);
+  return entry;
+}
+
+/* 슬롯 버튼 그리기. loading=true면 아직 가용성 미확정(전부 클릭 가능하게 낙관적 표시) */
+function paintSlots(grid, svc, data, loading){
+  const bookings = data.bookings || [], blocks = data.blocks || [];
+  const fullDay = blocks.some(b=> !b.block_time);
+  grid.innerHTML = '';
+  svc.slots.forEach(slot=>{
+    const s = toMin(slot), e = s + svc.dur;
+    let taken = fullDay;
+    if(!taken) taken = bookings.some(bk=> overlap(s, e, toMin(bk.booking_time), toMin(bk.booking_time)+(bk.duration_min||60)));
+    if(!taken) taken = blocks.some(b=> b.block_time && toMin(b.block_time) >= s && toMin(b.block_time) < e);
+
+    const btn = document.createElement('button');
+    btn.type='button';
+    btn.className = 'slot' + (taken?' taken':'') + (state.time===slot?' active':'');
+    btn.textContent = slot;
+    if(taken){
+      btn.disabled = true;
+      if(state.time===slot) state.time = null;   // 조회 결과 예약 마감된 슬롯을 골랐다면 해제
+    } else {
+      btn.addEventListener('click', ()=>{
+        state.time = slot;
+        $$('.slot',grid).forEach(x=> x.classList.remove('active'));
+        btn.classList.add('active');
+      });
+    }
+    grid.appendChild(btn);
+  });
+  if(loading){
+    const tag = document.createElement('span');
+    tag.className = 'slot-empty loading';
+    tag.textContent = '예약 가능 여부 확인 중…';
+    grid.appendChild(tag);
+  }
 }
 
 async function renderSlots(){
@@ -249,38 +309,28 @@ async function renderSlots(){
   const svc = state.service && SERVICES[state.service];
   if(!svc){ grid.innerHTML = '<span class="slot-empty">서비스를 먼저 선택해 주세요.</span>'; return; }
   if(!state.date){ grid.innerHTML = '<span class="slot-empty">날짜를 선택하면 가능한 시간이 표시됩니다.</span>'; return; }
+  if(state.date < minBookDate() || state.date > maxBookDate()){
+    state.time = null;
+    grid.innerHTML = `<span class="slot-empty">예약은 오늘로부터 ${BOOKING_MIN_LEAD_DAYS}일 뒤 ~ ${BOOKING_WINDOW_DAYS}일 이내에서만 가능합니다.</span>`; return;
+  }
   if(svc.weekendOnly && !isWeekend(state.date)){
     grid.innerHTML = '<span class="slot-empty">이 서비스는 주말(토·일)만 예약 가능합니다.</span>'; return;
   }
 
-  grid.innerHTML = '<span class="slot-empty">확인 중…</span>';
-  let bookings = [], blocks = [];
-  try { bookings = await db.bookingsOnDate(state.date); blocks = await db.blocksOnDate(state.date); }
-  catch(e){ /* 미연결 시 전부 가능으로 표시 */ }
+  const reqDate = state.date, reqSvc = svc.key;
+  const cached = slotCache.get(reqDate);
+  const fresh = cached && (Date.now() - cached.at) < SLOT_CACHE_TTL;
 
-  const fullDay = blocks.some(b=> !b.block_time);
-  const now = new Date(); const isToday = state.date === todayStr();
-  const nowMin = now.getHours()*60 + now.getMinutes();
+  // 1) 캐시가 있으면 그대로, 없으면 즉시 낙관적 렌더 → 화면이 바로 뜬다
+  paintSlots(grid, svc, fresh ? cached : { bookings:[], blocks:[] }, !fresh);
+  if(fresh) return;
 
-  grid.innerHTML = '';
-  svc.slots.forEach(slot=>{
-    const s = toMin(slot), e = s + svc.dur;
-    let taken = fullDay;
-    if(!taken) taken = bookings.some(bk=> overlap(s, e, toMin(bk.booking_time), toMin(bk.booking_time)+(bk.duration_min||60)));
-    if(!taken) taken = blocks.some(b=> b.block_time && toMin(b.block_time) >= s && toMin(b.block_time) < e);
-    if(!taken && isToday && s <= nowMin) taken = true;
-
-    const btn = document.createElement('button');
-    btn.type='button'; btn.className = 'slot' + (taken?' taken':''); btn.textContent = slot;
-    if(!taken){
-      btn.addEventListener('click', ()=>{
-        state.time = slot;
-        $$('.slot',grid).forEach(x=> x.classList.remove('active'));
-        btn.classList.add('active');
-      });
-    } else { btn.disabled = true; }
-    grid.appendChild(btn);
-  });
+  // 2) 가용성 데이터 도착 후 예약/차단된 시간만 비활성화
+  let data;
+  try { data = await fetchAvailability(reqDate); }
+  catch(e){ data = { bookings:[], blocks:[] }; }
+  if(state.date !== reqDate || state.service !== reqSvc) return;  // 그 사이 선택이 바뀌면 무시
+  paintSlots(grid, svc, data, false);
 }
 
 async function submitBooking(ev){
@@ -288,6 +338,9 @@ async function submitBooking(ev){
   const msg = $('#formMsg'); msg.className='form-msg'; msg.textContent='';
   if(!state.service){ return fail(msg,'서비스를 선택해 주세요.'); }
   if(!state.date){ return fail(msg,'날짜를 선택해 주세요.'); }
+  if(state.date < minBookDate() || state.date > maxBookDate()){
+    return fail(msg,`예약은 오늘로부터 ${BOOKING_MIN_LEAD_DAYS}일 뒤 ~ ${BOOKING_WINDOW_DAYS}일 이내에서만 가능합니다.`);
+  }
   if(!state.time){ return fail(msg,'시간을 선택해 주세요.'); }
 
   const svc = SERVICES[state.service];
@@ -349,6 +402,7 @@ async function submitBooking(ev){
     }
     // 2) 예약 저장
     await db.createBooking(row);
+    slotCache.delete(row.booking_date);   // 방금 예약한 날짜 캐시 무효화 → 즉시 마감 반영
     msg.className='form-msg ok';
     msg.textContent = PAYMENT_ENABLED
       ? `결제가 완료되어 예약이 접수되었습니다. 확정 안내 메일을 곧 보내드릴게요. 감사합니다.`
@@ -387,6 +441,13 @@ function initAdmin(){
   $('#adminClose').addEventListener('click', ()=>{ location.hash=''; });
   $('#adminLoginBtn').addEventListener('click', adminLogin);
   $('#adminPw').addEventListener('keydown', e=>{ if(e.key==='Enter') adminLogin(); });
+  $('#adminLogout')?.addEventListener('click', async ()=>{ await sbClient?.auth.signOut(); });
+
+  // 세션 복원 + 로그인 상태 변화 반영 (Supabase Auth)
+  if(CONFIGURED && sbClient){
+    sbClient.auth.getSession().then(({data})=> applyAuth(data.session));
+    sbClient.auth.onAuthStateChange((_ev, session)=> applyAuth(session));
+  }
 
   $$('.atab').forEach(t=> t.addEventListener('click', ()=>{
     $$('.atab').forEach(x=>x.classList.remove('active')); t.classList.add('active');
@@ -412,13 +473,26 @@ function handleHash(){
   if(open && adminAuthed) loadBookings();
 }
 
-function adminLogin(){
+/* 로그인 세션 유무에 따라 로그인/대시보드 화면 전환 */
+function applyAuth(session){
+  adminAuthed = !!session;
+  $('#adminLogin').hidden = adminAuthed;
+  $('#adminDash').hidden = !adminAuthed;
+  $('#adminLogout')?.toggleAttribute('hidden', !adminAuthed);
+  const msg = $('#adminLoginMsg'); if(msg && adminAuthed) msg.textContent = '';
+  if(adminAuthed && location.hash === '#admin') loadBookings();
+}
+
+async function adminLogin(){
   const msg=$('#adminLoginMsg'); msg.className='form-msg';
-  if($('#adminPw').value === ADMIN_PASSWORD){
-    adminAuthed=true;
-    $('#adminLogin').hidden=true; $('#adminDash').hidden=false;
-    loadBookings();
-  } else { msg.className='form-msg err'; msg.textContent='비밀번호가 올바르지 않습니다.'; }
+  if(!CONFIGURED || !sbClient){ msg.className='form-msg err'; msg.textContent='Supabase 설정이 필요합니다.'; return; }
+  const email = ($('#adminEmail')?.value || '').trim();
+  const password = $('#adminPw').value;
+  if(!email || !password){ msg.className='form-msg err'; msg.textContent='이메일과 비밀번호를 입력해 주세요.'; return; }
+  msg.textContent = '로그인 중…';
+  const { error } = await sbClient.auth.signInWithPassword({ email, password });
+  if(error){ msg.className='form-msg err'; msg.textContent='이메일 또는 비밀번호가 올바르지 않습니다.'; return; }
+  // 성공 시 onAuthStateChange → applyAuth가 대시보드로 전환
 }
 
 let allBookings = [];
@@ -577,7 +651,7 @@ async function showHistory(email,name){
 /* =========================================================
    시간 차단 — 달력 → 날짜 선택 → 시간 선택
    ========================================================= */
-const BLOCK_TIMES = (()=>{ const a=[]; for(let h=9;h<=19;h++){ a.push(`${String(h).padStart(2,'0')}:00`); a.push(`${String(h).padStart(2,'0')}:30`); } return a; })();
+const BLOCK_TIMES = (()=>{ const a=[]; for(let h=9;h<=20;h++){ a.push(`${String(h).padStart(2,'0')}:00`); if(h<20) a.push(`${String(h).padStart(2,'0')}:30`); } return a; })();
 let calY, calM, selDate=null, allBlocks=[];
 
 function shiftMonth(d){ calM+=d; if(calM<0){calM=11;calY--;} else if(calM>11){calM=0;calY++;} renderCalendar(); }

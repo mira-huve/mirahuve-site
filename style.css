@@ -221,6 +221,7 @@ a{color:inherit;text-decoration:none;}
 .pick.active strong,.pick.active span{color:var(--gold-light);}
 .slot-grid{display:flex;flex-wrap:wrap;gap:8px;}
 .slot-empty{font-size:13px;opacity:0.6;}
+.slot-empty.loading{flex-basis:100%;opacity:0.45;}
 .slot{
   border:1px solid rgba(13,20,36,0.18);border-radius:999px;background:var(--paper);
   padding:8px 16px;cursor:pointer;font-family:var(--font);font-size:13px;transition:all .2s;
@@ -266,6 +267,7 @@ footer .small{font-size:10px;letter-spacing:0.3em;margin-top:20px;opacity:0.5;fo
 }
 .admin-wrap{max-width:1000px;margin:0 auto;}
 .admin-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;}
+.admin-head-actions{display:flex;gap:8px;}
 .admin-head h2{font-weight:300;font-size:30px;}
 .admin-close{background:none;border:1px solid rgba(13,20,36,0.2);border-radius:6px;padding:8px 14px;cursor:pointer;font-family:var(--font);font-size:13px;}
 .admin-login{max-width:340px;margin:60px auto;text-align:center;}
