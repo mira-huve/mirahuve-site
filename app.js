@@ -1216,7 +1216,8 @@ function reportOrderCard(o){
         ${['pending','confirmed','completed','cancelled'].map(s=>`<option value="${s}" ${s===o.status?'selected':''}>${STATUS_LABEL[s]}</option>`).join('')}
       </select>
       ${prepBtn}
-      <button class="mini-btn act-mail">Gmail 메일</button>
+      <button class="mini-btn act-mail">접수/확정 메일</button>
+      <button class="mini-btn act-mail-deliver">리포트 발송 메일</button>
       ${reportBtn}
     </div>
     <div class="bk-memo">
@@ -1229,6 +1230,10 @@ function reportOrderCard(o){
     try{
       await db.updateReportOrder(o.id,{status:ns}); o.status=ns;
       el.className=`bk-card s-${o.status}`; el.querySelector('.bk-badge').textContent=STATUS_LABEL[o.status];
+      if(ns==='confirmed'){                             // 확정 시 확정 안내메일 자동 작성
+        const w = window.open(buildReportMail(o,'confirmed'), '_blank');
+        if(!w) alert('팝업이 차단되었습니다. 브라우저에서 이 사이트의 팝업을 허용하면 확정 안내 메일 작성창이 열립니다.');
+      }
       renderReportOrders();
     }catch(err){ alert('상태 변경 실패'); console.error(err); }
   });
@@ -1247,6 +1252,10 @@ function reportOrderCard(o){
     const w = window.open(buildReportMail(o), '_blank');
     if(!w) alert('팝업이 차단되었습니다. 브라우저에서 이 사이트의 팝업을 허용하면 메일 작성창이 열립니다.');
   });
+  el.querySelector('.act-mail-deliver').addEventListener('click', ()=>{
+    const w = window.open(buildReportMail(o,'delivery'), '_blank');
+    if(!w) alert('팝업이 차단되었습니다. 브라우저에서 이 사이트의 팝업을 허용하면 메일 작성창이 열립니다.');
+  });
   const repBtn = el.querySelector('.act-report');
   if(repBtn){
     repBtn.addEventListener('click', async ()=>{
@@ -1260,9 +1269,32 @@ function reportOrderCard(o){
 }
 
 /* 리포트 신청 접수 메일(Gmail compose) */
-function buildReportMail(o){
+function buildReportMail(o, type='received'){
+  const confirmed = type==='confirmed';
   const personas = (o.personas||[]).length ? (o.personas||[]).join(', ') : '없음';
-  const subject = `[MIRA HUVE] 강점 리포트 신청이 접수되었습니다`;
+  if(type==='delivery'){                                // 완성된 리포트 발송 안내 메일
+    const dLines = [
+      `안녕하세요, ${o.customer_name} 님.`,
+      `신청하신 강점 리포트가 완성되어 보내드립니다. 첨부된 파일을 확인해 주세요.`,
+      ``,
+      `추가 옵션 · ${personas}`,
+      ``,
+      `리포트를 읽다가 궁금한 점이 있으면 이 메일로 편하게 회신해 주세요.`,
+      ``,
+      `세상은 바꿀 수 없지만, 당신의 세상은 바꿀 수 있습니다.`,
+      `MIRA HUVE`
+    ];
+    return 'https://mail.google.com/mail/?view=cm&fs=1'
+      + '&to=' + encodeURIComponent(o.customer_email)
+      + '&su=' + encodeURIComponent(`[MIRA HUVE] 강점 리포트가 완성되었습니다`)
+      + '&body=' + encodeURIComponent(dLines.join('\n'));
+  }
+  const subject = confirmed
+    ? `[MIRA HUVE] 강점 리포트 신청이 확정되었습니다`
+    : `[MIRA HUVE] 강점 리포트 신청이 접수되었습니다`;
+  const intro = confirmed
+    ? `강점 리포트 신청이 확정되었습니다. 아래 내용을 확인해 주세요.`
+    : `강점 리포트 신청이 접수되었습니다. 아래 내용을 확인해 주세요.`;
   const guide = o.has_report
     ? [ `보내주신 강점 진단(갤럽 CliftonStrengths 34개 전체) 결과지를 잘 받았습니다.`,
         `별도의 테스트 코드 발송·진단 없이, 보내주신 결과를 바탕으로 다음날 리포트를 만들어 보내드립니다.` ]
@@ -1270,7 +1302,7 @@ function buildReportMail(o){
         `코드를 받으시면 진단을 완료해 주세요. 완료된 결과를 바탕으로 리포트를 만들어 보내드립니다.` ];
   const lines = [
     `안녕하세요, ${o.customer_name} 님.`,
-    `강점 리포트 신청이 접수되었습니다. 아래 내용을 확인해 주세요.`,
+    intro,
     ``,
     `추가 옵션 · ${personas}`,
     `결제 금액 · ${won(o.total_price)}`,
@@ -1339,6 +1371,7 @@ function pairReportOrderCard(o){
       </select>
       <button class="mini-btn act-mail1">사람1 메일</button>
       <button class="mini-btn act-mail2">사람2 메일</button>
+      <button class="mini-btn act-mail-deliver">리포트 발송 메일</button>
       ${rep1Btn}
       ${rep2Btn}
     </div>
@@ -1352,6 +1385,11 @@ function pairReportOrderCard(o){
     try{
       await db.updatePairReportOrder(o.id,{status:ns}); o.status=ns;
       el.className=`bk-card s-${o.status}`; el.querySelector('.bk-badge').textContent=STATUS_LABEL[o.status];
+      if(ns==='confirmed'){                             // 확정 시 두 사람에게 확정 안내메일 자동 작성
+        const w1 = window.open(buildPairReportMail(o,1,'confirmed'), '_blank');
+        const w2 = window.open(buildPairReportMail(o,2,'confirmed'), '_blank');
+        if(!w1 || !w2) alert('확정 안내 메일 작성창 일부가 팝업 차단되었습니다. 팝업을 허용한 뒤 "사람1 메일"·"사람2 메일" 버튼으로 각각 다시 열 수 있습니다.');
+      }
       renderPairReportOrders();
     }catch(err){ alert('상태 변경 실패'); console.error(err); }
   });
@@ -1367,6 +1405,11 @@ function pairReportOrderCard(o){
   el.querySelector('.act-mail2').addEventListener('click', ()=>{
     const w = window.open(buildPairReportMail(o,2), '_blank');
     if(!w) alert('팝업이 차단되었습니다. 브라우저에서 이 사이트의 팝업을 허용하면 메일 작성창이 열립니다.');
+  });
+  el.querySelector('.act-mail-deliver').addEventListener('click', ()=>{
+    const w1 = window.open(buildPairReportMail(o,1,'delivery'), '_blank');
+    const w2 = window.open(buildPairReportMail(o,2,'delivery'), '_blank');
+    if(!w1 || !w2) alert('리포트 발송 메일 작성창 일부가 팝업 차단되었습니다. 팝업을 허용한 뒤 다시 눌러 주세요.');
   });
   const rep1El = el.querySelector('.act-report1');
   if(rep1El) rep1El.addEventListener('click', async ()=>{
@@ -1386,21 +1429,44 @@ function pairReportOrderCard(o){
 }
 
 /* 관계 리포트 접수 메일(Gmail compose) — 두 사람에게 각각 보낸다 */
-function buildPairReportMail(o, personNum){
+function buildPairReportMail(o, personNum, type='received'){
+  const confirmed = type==='confirmed';
   const isP1 = personNum===1;
   const name = isP1 ? o.person1_name : o.person2_name;
   const email = isP1 ? o.person1_email : o.person2_email;
   const role = isP1 ? o.person1_role : o.person2_role;
   const hasReport = isP1 ? o.person1_has_report : o.person2_has_report;
   const otherName = isP1 ? o.person2_name : o.person1_name;
-  const subject = `[MIRA HUVE] 관계 리포트 신청이 접수되었습니다`;
+  if(type==='delivery'){                                // 완성된 관계 리포트 발송 안내 메일
+    const dLines = [
+      `안녕하세요, ${name} 님.`,
+      `${otherName} 님과 함께 신청하신 관계 리포트가 완성되어 보내드립니다. 첨부된 파일을 확인해 주세요.`,
+      ``,
+      `관계 · ${o.relationship_label}${role ? ' · 역할: '+role : ''}`,
+      ``,
+      `두 분의 강점이 서로 어떻게 부딪히고 보완되는지 담았습니다. 읽다가 궁금한 점이 있으면 이 메일로 편하게 회신해 주세요.`,
+      ``,
+      `세상은 바꿀 수 없지만, 당신의 세상은 바꿀 수 있습니다.`,
+      `MIRA HUVE`
+    ];
+    return 'https://mail.google.com/mail/?view=cm&fs=1'
+      + '&to=' + encodeURIComponent(email)
+      + '&su=' + encodeURIComponent(`[MIRA HUVE] 관계 리포트가 완성되었습니다`)
+      + '&body=' + encodeURIComponent(dLines.join('\n'));
+  }
+  const subject = confirmed
+    ? `[MIRA HUVE] 관계 리포트 신청이 확정되었습니다`
+    : `[MIRA HUVE] 관계 리포트 신청이 접수되었습니다`;
+  const secondLine = confirmed
+    ? `${otherName} 님과 함께 신청하신 관계 리포트가 확정되었습니다.`
+    : `${otherName} 님과 함께 신청하신 관계 리포트가 접수되었습니다.`;
   const guide = hasReport
     ? [ `보내주신 강점 진단(갤럽 CliftonStrengths 34개 전체) 결과지를 잘 받았습니다.` ]
     : [ `리포트 생성을 위해 강점 진단(갤럽 CliftonStrengths) 테스트 코드를 곧 보내드립니다.`,
         `코드를 받으시면 진단을 완료해 주세요.` ];
   const lines = [
     `안녕하세요, ${name} 님.`,
-    `${otherName} 님과 함께 신청하신 관계 리포트가 접수되었습니다.`,
+    secondLine,
     ``,
     `관계 · ${o.relationship_label}${role ? ' · 역할: '+role : ''}`,
     ``,
