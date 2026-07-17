@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>상담 예약 · MIRA HUVE</title>
+<meta name="description" content="갤럽 CliftonStrengths 기반 강점 코칭 상담을 예약하세요. 개인·연인·부부·청소년·학부모 상담, 팀 워크숍.">
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" href="style.css">
+<style>
+/* 신청 페이지 전용 미니 헤더 — 전체 nav 대신 로고 + 홈으로 링크만 두어 신청 흐름에 집중시킨다 */
+.mini-head{
+  background:radial-gradient(ellipse at 30% 40%,#2a3a5a 0%,#0d1424 70%);
+  padding:20px 32px;
+}
+.mini-head-in{max-width:1100px;margin:0 auto;display:flex;align-items:center;gap:10px;}
+.mini-head .nav-name{color:var(--paper);font-weight:300;letter-spacing:4px;font-size:15px;}
+.mini-head a.home{
+  margin-left:auto;font-size:13px;color:var(--gold-light);text-decoration:none;
+  border:1px solid rgba(183,167,214,.35);border-radius:999px;padding:8px 18px;transition:border-color .2s;
+}
+.mini-head a.home:hover{border-color:var(--gold-light);}
+</style>
+</head>
+<body>
+
+<!-- ============ MINI HEADER ============ -->
+<header class="mini-head">
+  <div class="mini-head-in">
+    <svg class="nav-mark" width="30" height="30" viewBox="0 0 360 360" aria-hidden="true">
+      <g stroke="rgba(183,167,214,0.8)" stroke-width="6" fill="none" stroke-linecap="round">
+        <line x1="90" y1="220" x2="140" y2="130"/>
+        <line x1="140" y1="130" x2="180" y2="195"/>
+        <line x1="180" y1="195" x2="220" y2="130"/>
+        <line x1="220" y1="130" x2="270" y2="220"/>
+      </g>
+      <g fill="#f4f1ea">
+        <circle cx="90" cy="220" r="11"/>
+        <circle cx="140" cy="130" r="12"/>
+        <circle cx="220" cy="130" r="12"/>
+        <circle cx="270" cy="220" r="11"/>
+      </g>
+      <circle cx="180" cy="195" r="14" fill="#B7A7D6"/>
+    </svg>
+    <span class="nav-name">MIRA HUVE</span>
+    <a class="home" href="index.html#services">← 홈으로</a>
+  </div>
+</header>
+
+<!-- ============ 신청 페이지 본문 ============ -->
+<section class="section booking reveal visible" id="bookingApply">
+  <div class="section-eyebrow">BOOKING · 예약</div>
+  <h2 class="section-title"><span class="accent">나를 이해하는 시간</span>을 예약하세요.</h2>
+  <p class="prereq-banner small">예약하시면 <strong>강점 진단 테스트 코드</strong>를 보내드립니다. 받으신 코드로 진단을 진행하시면 됩니다. 이미 결과지가 있으시면 아래에 체크해 주세요. <strong>상담비를 40% 할인</strong>해 드립니다.</p>
+  <p class="booking-note">상담일 24시간 전까지 테스트가 완료되지 않으면 예약이 자동 취소됩니다. 테스트는 30~40분 방해받지 않는 시간이 필요합니다.</p>
+  <p class="booking-note">서비스 제공 시기 · 본 서비스는 비대면 또는 대면 상담 서비스로, 결제 완료 후 고객님이 선택하신 예약 일자·시간에 상담이 제공됩니다. 예약은 <strong>결제일로부터 2일 뒤 ~ 90일 이내</strong>에서 선택 가능합니다.</p>
+
+  <!-- 예약 전용 절차 -->
+  <div class="report-process">
+    <h3 class="rp-title">예약 서비스 절차</h3>
+    <div class="process-line">
+      <div class="proc-step">
+        <div class="proc-dot">1</div>
+        <h4>예약 신청</h4>
+        <p>원하는 서비스와 날짜·시간을 선택해 신청합니다.</p>
+      </div>
+      <div class="proc-step">
+        <div class="proc-dot">2</div>
+        <h4>테스트 코드 발송</h4>
+        <p>예약이 접수되면 강점 진단(갤럽 CliftonStrengths) 코드를 보내드립니다.</p>
+      </div>
+      <div class="proc-step">
+        <div class="proc-dot">3</div>
+        <h4>진단 &amp; 리포트</h4>
+        <p>받으신 코드로 진단을 마치면, 결과 리포트를 바탕으로 상담을 준비합니다.</p>
+      </div>
+      <div class="proc-step">
+        <div class="proc-dot">4</div>
+        <h4>상담 진행</h4>
+        <p>당신의 별을 함께 잇습니다. 강점을 삶과 일에 어떻게 쓸지 찾습니다.</p>
+      </div>
+    </div>
+  </div>
+
+  <form id="bookingForm" class="booking-card report-order-card" autocomplete="off">
+    <div class="field">
+      <label>1. 서비스 선택</label>
+      <div class="service-pick" id="servicePick">
+        <button type="button" class="pick" data-service="individual"><strong>개인 상담</strong><span>60분 · 대면·온라인</span></button>
+        <button type="button" class="pick" data-service="couple"><strong>연인·부부 상담</strong><span>90분 · 대면·온라인</span></button>
+        <button type="button" class="pick" data-service="youth"><strong>청소년·학부모 상담</strong><span>90분 · 대면·온라인</span></button>
+        <button type="button" class="pick" data-service="team"><strong>팀 워크숍</strong><span>2시간 · 전일</span></button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="bDate">2. 날짜 선택</label>
+      <input type="date" id="bDate" required>
+      <small class="hint" id="dateHint">서비스를 먼저 선택해 주세요.</small>
+    </div>
+
+    <div class="field">
+      <label>3. 시간 선택</label>
+      <div class="slot-grid" id="slotGrid"><span class="slot-empty">날짜를 선택하면 가능한 시간이 표시됩니다.</span></div>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label for="bName">이름</label>
+        <input type="text" id="bName" required>
+      </div>
+      <div class="field">
+        <label for="bPhone">연락처</label>
+        <input type="tel" id="bPhone" placeholder="010-0000-0000" required>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="bEmail">이메일</label>
+      <input type="email" id="bEmail" placeholder="example@email.com" required>
+    </div>
+
+    <div class="field">
+      <label for="bPurpose">상담 목적</label>
+      <select id="bPurpose">
+        <option value="자기 이해">자기 이해 · 강점 발견</option>
+        <option value="진로 · 방향">진로 · 방향 설정</option>
+        <option value="관계">관계 · 소통</option>
+        <option value="팀 · 조직">팀 · 조직 빌딩</option>
+        <option value="기타">기타</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="bDetail">고민 또는 궁금한 이야기</label>
+      <textarea id="bDetail" rows="3" placeholder="어떤 마음으로 오시는지 자유롭게 적어주세요."></textarea>
+    </div>
+
+    <div class="field check">
+      <label class="checkbox">
+        <input type="checkbox" id="bReport">
+        <span>이미 강점 진단 결과지를 가지고 있습니다. 업로드하시면 상담비를 <strong>40% 할인</strong>해 드려요.</span>
+      </label>
+    </div>
+
+    <div class="field report-upload" id="reportUploadWrap" hidden>
+      <label for="bReportFile">강점 진단 결과지 업로드 (PDF · 이미지)</label>
+      <input type="file" id="bReportFile" accept=".pdf,.png,.jpg,.jpeg,.webp">
+      <small class="hint">업로드가 확인되면 결제 금액에 40% 할인이 자동 적용됩니다.</small>
+    </div>
+
+    <div class="price-line" id="pricePreview" hidden></div>
+
+    <button type="submit" class="btn-primary full" id="submitBtn">예약 신청하기</button>
+    <div class="form-msg" id="formMsg"></div>
+  </form>
+</section>
+
+<!-- ============ FOOTER ============ -->
+<footer>
+  사람은 저마다의 별로 빛납니다.<br>
+  우리가 할 일은 그 별을 잇는 선을 함께 그어보는 일뿐.
+  <div class="footer-social">
+    <a class="social-link" href="https://youtube.com/@mirahuve" target="_blank" rel="noopener" aria-label="YouTube">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="2" y="5" width="20" height="14" rx="4"/>
+        <path d="M10 9l5 3-5 3V9z" fill="currentColor" stroke="none"/>
+      </svg>
+    </a>
+    <a class="social-link" href="https://instagram.com/MIRA_HUVE" target="_blank" rel="noopener" aria-label="Instagram">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="3" width="18" height="18" rx="5"/>
+        <circle cx="12" cy="12" r="4"/>
+        <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/>
+      </svg>
+    </a>
+    <a class="social-link" id="emailLink" href="#" data-user="mira" data-domain="mirahuve.com" aria-label="이메일">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="5" width="18" height="14" rx="2"/>
+        <path d="M3 7l9 6 9-6"/>
+      </svg>
+    </a>
+  </div>
+  <div class="small">MIRA HUVE · HUMAN LOVE · 2026</div>
+  <div class="footer-legal">
+    <a href="terms.html">이용약관</a> · <a href="privacy.html">개인정보처리방침</a> · <a href="refund.html">환불·취소 정책</a>
+  </div>
+  <div class="footer-biz">
+    주식회사 미라휴브 · 대표 박미라 · 사업자등록번호 639-87-03882<br>
+    통신판매업 신고 준비중 · 서울특별시 강남구 테헤란로33길 18, 549호(역삼동, 서울철강빌딩)<br>
+    전화 010-5205-5870 · 이메일 mira@mirahuve.com
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.portone.io/v2/browser-sdk.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

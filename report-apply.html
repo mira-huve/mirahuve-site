@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>강점 리포트 신청 · MIRA HUVE</title>
+<meta name="description" content="갤럽 CliftonStrengths 기반 강점 리포트를 신청하세요. 강점 총평·커리어·관계·팀·의사결정 다섯 가지 관점과 역할별 추가 옵션을 담은 MIRA HUVE 강점 리포트.">
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" href="style.css">
+<style>
+/* 신청 페이지 전용 미니 헤더 — 전체 nav 대신 로고 + 홈으로 링크만 두어 신청 흐름에 집중시킨다 */
+.mini-head{
+  background:radial-gradient(ellipse at 30% 40%,#2a3a5a 0%,#0d1424 70%);
+  padding:20px 32px;
+}
+.mini-head-in{max-width:1100px;margin:0 auto;display:flex;align-items:center;gap:10px;}
+.mini-head .nav-name{color:var(--paper);font-weight:300;letter-spacing:4px;font-size:15px;}
+.mini-head a.home{
+  margin-left:auto;font-size:13px;color:var(--gold-light);text-decoration:none;
+  border:1px solid rgba(183,167,214,.35);border-radius:999px;padding:8px 18px;transition:border-color .2s;
+}
+.mini-head a.home:hover{border-color:var(--gold-light);}
+.apply-summary{margin-top:22px;display:flex;flex-wrap:wrap;gap:8px 10px;}
+.apply-summary span{
+  font-size:12.5px;font-weight:600;padding:6px 14px;border-radius:999px;
+  border:1px solid rgba(116,99,157,.5);color:var(--key-blue);background:rgba(116,99,157,.08);
+}
+</style>
+</head>
+<body>
+
+<!-- ============ MINI HEADER ============ -->
+<header class="mini-head">
+  <div class="mini-head-in">
+    <svg class="nav-mark" width="30" height="30" viewBox="0 0 360 360" aria-hidden="true">
+      <g stroke="rgba(183,167,214,0.8)" stroke-width="6" fill="none" stroke-linecap="round">
+        <line x1="90" y1="220" x2="140" y2="130"/>
+        <line x1="140" y1="130" x2="180" y2="195"/>
+        <line x1="180" y1="195" x2="220" y2="130"/>
+        <line x1="220" y1="130" x2="270" y2="220"/>
+      </g>
+      <g fill="#f4f1ea">
+        <circle cx="90" cy="220" r="11"/>
+        <circle cx="140" cy="130" r="12"/>
+        <circle cx="220" cy="130" r="12"/>
+        <circle cx="270" cy="220" r="11"/>
+      </g>
+      <circle cx="180" cy="195" r="14" fill="#B7A7D6"/>
+    </svg>
+    <span class="nav-name">MIRA HUVE</span>
+    <a class="home" href="index.html#report">← 홈으로</a>
+  </div>
+</header>
+
+<!-- ============ 신청 페이지 본문 ============ -->
+<section class="section report reveal visible" id="reportApply">
+  <div class="section-eyebrow">MIRA HUVE STRENGTH REPORT · 신청</div>
+  <h2 class="section-title">나의 강점을<br><span class="accent">리포트</span>로 받아보세요.</h2>
+  <h3 class="rp-title">기본 강점 보고서</h3>
+  <p class="report-intro">강점 총평부터 커리어·관계·팀·의사결정까지 다섯 가지 관점을 담은 기본 리포트에, 내가 살아가는 여러 역할에 맞춘 추가 옵션을 더할 수 있습니다.</p>
+  <div class="apply-summary">
+    <span>강점 총평</span><span>커리어·성과</span><span>관계·소통</span><span>팀·리더십</span><span>의사결정·위기대응</span>
+  </div>
+
+  <div class="report-package">
+    <s>100,000원</s> <strong>80,000원</strong>
+  </div>
+
+  <!-- 리포트 신청 폼 (추가 옵션 + 절차 + 결제) -->
+  <form id="reportOrderForm" class="booking-card report-order-card" autocomplete="off">
+    <div class="report-addon">
+      <h3 class="ra-title">내 사용 보고서</h3>
+      <p class="ra-sub">추가 옵션</p>
+      <p class="ra-desc">같은 강점도 부모로서, 애인으로서, 팀장으로서 있을 때 다르게 쓰입니다. 필요한 관계·역할을 골라보세요. 옵션은 개당 10,000원이며, 여러 개 선택하면 할인이 적용됩니다.</p>
+      <div class="persona-pick" id="personaPick">
+        <button type="button" class="pick persona" data-persona="parent">부모로서의 나는?</button>
+        <button type="button" class="pick persona" data-persona="child">자식으로서의 나는?</button>
+        <button type="button" class="pick persona" data-persona="lover">애인으로서의 나는?</button>
+        <button type="button" class="pick persona" data-persona="founder">스타트업대표로서의 나는?</button>
+        <button type="button" class="pick persona" data-persona="teamlead">조직의 팀장으로서 나는?</button>
+        <button type="button" class="pick persona" data-persona="colleague">조직의 동료로서의 나는?</button>
+        <button type="button" class="pick persona" data-persona="aibuilder">AI Builder로서의 나는?</button>
+        <button type="button" class="pick persona" data-persona="custom">기타 (직접 입력)</button>
+      </div>
+      <div class="field report-custom-persona" id="customPersonaWrap" hidden>
+        <label for="rCustomPersona">어떤 역할로서의 나를 알고 싶으신가요? (여러 개 추가 가능)</label>
+        <div class="custom-persona-add">
+          <input type="text" id="rCustomPersona" placeholder="예: 프리랜서로서의 나는?">
+          <button type="button" class="mini-btn" id="rCustomPersonaAdd">추가</button>
+        </div>
+        <div class="custom-persona-list" id="customPersonaList"></div>
+      </div>
+    </div>
+
+    <!-- 리포트 전용 절차 -->
+    <div class="report-process">
+      <h3 class="rp-title">서비스 절차</h3>
+      <div class="process-line">
+        <div class="proc-step">
+          <div class="proc-dot">1</div>
+          <h4>신청</h4>
+          <p>원하는 추가 옵션을 선택하고 결제합니다.</p>
+        </div>
+        <div class="proc-step">
+          <div class="proc-dot">2</div>
+          <h4>테스트코드 송부</h4>
+          <p>신청이 접수되면 강점 진단(갤럽 CliftonStrengths) 코드를 보내드립니다.</p>
+        </div>
+        <div class="proc-step">
+          <div class="proc-dot">3</div>
+          <h4>테스트완료</h4>
+          <p>받으신 코드로 진단을 완료합니다.</p>
+        </div>
+        <div class="proc-step">
+          <div class="proc-dot">4</div>
+          <h4>리포트 생성</h4>
+          <p>완료된 테스트 결과로 리포트를 만들어 보내드립니다.</p>
+        </div>
+      </div>
+    </div>
+
+    <h3 class="rp-title">신청하기</h3>
+    <div class="field-row">
+      <div class="field">
+        <label for="rName">이름</label>
+        <input type="text" id="rName" required>
+      </div>
+      <div class="field">
+        <label for="rPhone">연락처</label>
+        <input type="tel" id="rPhone" placeholder="010-0000-0000" required>
+      </div>
+    </div>
+    <div class="field">
+      <label for="rEmail">이메일</label>
+      <input type="email" id="rEmail" placeholder="example@email.com" required>
+    </div>
+
+    <div class="field check">
+      <label class="checkbox">
+        <input type="checkbox" id="rHasReport">
+        <span>이미 강점 진단(갤럽 CliftonStrengths 34개 전체) 결과지를 가지고 있습니다. 업로드하시면 기본 리포트 가격을 <strong>40,000원</strong>으로 할인해 드려요.</span>
+      </label>
+    </div>
+
+    <div class="field report-upload" id="rReportUploadWrap" hidden>
+      <label for="rReportFile">강점 진단 결과지 업로드 (PDF · 이미지)</label>
+      <input type="file" id="rReportFile" accept=".pdf,.png,.jpg,.jpeg,.webp">
+      <small class="hint">업로드하시면 테스트코드 발송·테스트완료 단계 없이, 업로드하신 결과로 다음날 리포트를 보내드립니다.</small>
+    </div>
+
+    <div class="price-line" id="reportPricePreview"></div>
+    <small class="hint price-tier-hint">한개 선택시 10,000원, 두개 선택시 개당 7,000원, 3개 선택시 개당 6,000원, 4개 이상 선택시 개당 5,000원</small>
+
+    <button type="submit" class="btn-primary full" id="reportSubmitBtn">결제하고 리포트 신청하기</button>
+    <div class="form-msg" id="reportFormMsg"></div>
+  </form>
+</section>
+
+<!-- ============ FOOTER ============ -->
+<footer>
+  사람은 저마다의 별로 빛납니다.<br>
+  우리가 할 일은 그 별을 잇는 선을 함께 그어보는 일뿐.
+  <div class="footer-social">
+    <a class="social-link" href="https://youtube.com/@mirahuve" target="_blank" rel="noopener" aria-label="YouTube">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="2" y="5" width="20" height="14" rx="4"/>
+        <path d="M10 9l5 3-5 3V9z" fill="currentColor" stroke="none"/>
+      </svg>
+    </a>
+    <a class="social-link" href="https://instagram.com/MIRA_HUVE" target="_blank" rel="noopener" aria-label="Instagram">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="3" width="18" height="18" rx="5"/>
+        <circle cx="12" cy="12" r="4"/>
+        <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/>
+      </svg>
+    </a>
+    <a class="social-link" id="emailLink" href="#" data-user="mira" data-domain="mirahuve.com" aria-label="이메일">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="5" width="18" height="14" rx="2"/>
+        <path d="M3 7l9 6 9-6"/>
+      </svg>
+    </a>
+  </div>
+  <div class="small">MIRA HUVE · HUMAN LOVE · 2026</div>
+  <div class="footer-legal">
+    <a href="terms.html">이용약관</a> · <a href="privacy.html">개인정보처리방침</a> · <a href="refund.html">환불·취소 정책</a>
+  </div>
+  <div class="footer-biz">
+    주식회사 미라휴브 · 대표 박미라 · 사업자등록번호 639-87-03882<br>
+    통신판매업 신고 준비중 · 서울특별시 강남구 테헤란로33길 18, 549호(역삼동, 서울철강빌딩)<br>
+    전화 010-5205-5870 · 이메일 mira@mirahuve.com
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.portone.io/v2/browser-sdk.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

@@ -7,6 +7,17 @@
 <meta name="description" content="갤럽 CliftonStrengths 기반 강점 코칭. 개인·연인·부부·청소년·학부모 상담, 팀 워크숍. 당신 안에 이미 있는 강점을 발견하세요. MIRA HUVE.">
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <link rel="stylesheet" href="style.css">
+<style>
+/* ▼ 히어로 섹션에만 골드 강조색을 적용 — 나머지 페이지·섹션은 style.css의 라벤더(:root) 유지 */
+.hero{--gold:#d4a574;--gold-light:#f4d9a8;--rust:#a0522d;}
+/* 최상단(내비·히어로 eyebrow) 텍스트를 흰색으로 — 어두운 배경에서 가독성 확보 */
+#nav .nav-name,
+#nav .nav-links a{color:#fff;}
+#nav .nav-links a:hover{color:var(--gold-light);}
+#nav .nav-cta{color:#fff !important;}
+#nav .nav-cta:hover{color:var(--ink) !important;}
+.hero .eyebrow{color:#fff;opacity:1;}
+</style>
 </head>
 <body>
 
@@ -14,7 +25,7 @@
 <nav id="nav">
   <a class="nav-brand" href="#top">
     <svg class="nav-mark" width="34" height="34" viewBox="0 0 360 360" aria-hidden="true">
-      <g stroke="rgba(244,217,168,0.8)" stroke-width="6" fill="none" stroke-linecap="round">
+      <g stroke="rgba(183,167,214,0.8)" stroke-width="6" fill="none" stroke-linecap="round">
         <line x1="90" y1="220" x2="140" y2="130"/>
         <line x1="140" y1="130" x2="180" y2="195"/>
         <line x1="180" y1="195" x2="220" y2="130"/>
@@ -26,7 +37,7 @@
         <circle cx="220" cy="130" r="12"/>
         <circle cx="270" cy="220" r="11"/>
       </g>
-      <circle cx="180" cy="195" r="14" fill="#f4d9a8"/>
+      <circle cx="180" cy="195" r="14" fill="#B7A7D6"/>
     </svg>
     <span class="nav-name">MIRA HUVE</span>
   </a>
@@ -37,8 +48,7 @@
     <a href="#strengths">강점이란</a>
     <a href="#report">리포트</a>
     <a href="#services">서비스</a>
-    <a href="#process">진행 과정</a>
-    <a class="nav-cta" href="#booking">예약하기</a>
+    <a class="nav-cta" href="booking-apply.html">예약하기</a>
   </div>
 </nav>
 
@@ -49,10 +59,6 @@
       <div class="eyebrow">MIRA HUVE · HUMAN LOVE</div>
       <h1>사람은 모두 다릅니다.<br>그 다름이 바로 <span class="accent">당신의 강점</span>입니다.</h1>
       <p class="lede">MIRA HUVE는 갤럽 CliftonStrengths를 통해 당신이 가장 자연스럽게 생각하고, 관계 맺고, 일하는 방식을 발견합니다.<br>강점을 이해하면 나를 바라보는 시선이 달라지고, 삶과 일의 방향은 한층 선명해집니다.</p>
-      <div class="hero-cta-row">
-        <a class="btn-primary" href="#booking">상담 예약하기</a>
-        <a class="btn-ghost" href="#strengths">강점이란?</a>
-      </div>
       <div class="sig">세상은 바꿀 수 없지만<br>당신의 세상은 바꿀 수 있습니다.</div>
     </div>
 
@@ -148,28 +154,98 @@
   <p class="strengths-intro">갤럽 CliftonStrengths는 각자가 가진 34개의 재능 테마로 보여주는 진단입니다. 같은 강점도 잘 맞는 곳에서 사용하면 장점이 되고, 맞지 않는 곳에서 사용하면 단점처럼 보일 수 있습니다. MIRA HUVE는 강점을 바꾸기보다, 나에게 맞게 사용하는 방법을 함께 찾습니다.</p>
   <div class="domain-grid">
     <div class="domain-card d-exec">
-      <div class="domain-num">01</div>
-      <h3>실행력</h3>
-      <div class="domain-en">EXECUTING</div>
-      <p>생각을 현실로 만드는 힘. 시작한 일을 끝까지 해내는 사람들의 영역입니다.</p>
+      <div class="flip-inner">
+        <div class="flip-front">
+          <div class="domain-num">01</div>
+          <h3>실행력</h3>
+          <div class="domain-en">EXECUTING</div>
+          <p>생각을 현실로 만드는 힘. 시작한 일을 끝까지 해내는 사람들의 영역입니다.</p>
+        </div>
+        <div class="flip-back">
+          <div class="domain-en">EXECUTING</div>
+          <div class="theme-tags">
+            <span class="strength-tag t-exec">성취</span>
+            <span class="strength-tag t-exec">정리</span>
+            <span class="strength-tag t-exec">신념</span>
+            <span class="strength-tag t-exec">공정성</span>
+            <span class="strength-tag t-exec">심사숙고</span>
+            <span class="strength-tag t-exec">체계</span>
+            <span class="strength-tag t-exec">집중</span>
+            <span class="strength-tag t-exec">책임</span>
+            <span class="strength-tag t-exec">복구</span>
+          </div>
+        </div>
+      </div>
     </div>
     <div class="domain-card d-infl">
-      <div class="domain-num">02</div>
-      <h3>영향력</h3>
-      <div class="domain-en">INFLUENCING</div>
-      <p>사람을 움직이고 메시지를 전하는 힘. 더 넓은 곳에 목소리를 닿게 합니다.</p>
+      <div class="flip-inner">
+        <div class="flip-front">
+          <div class="domain-num">02</div>
+          <h3>영향력</h3>
+          <div class="domain-en">INFLUENCING</div>
+          <p>사람을 움직이고 메시지를 전하는 힘. 더 넓은 곳에 목소리를 닿게 합니다.</p>
+        </div>
+        <div class="flip-back">
+          <div class="domain-en">INFLUENCING</div>
+          <div class="theme-tags">
+            <span class="strength-tag t-infl">행동</span>
+            <span class="strength-tag t-infl">주도력</span>
+            <span class="strength-tag t-infl">커뮤니케이션</span>
+            <span class="strength-tag t-infl">승부</span>
+            <span class="strength-tag t-infl">최상화</span>
+            <span class="strength-tag t-infl">자기확신</span>
+            <span class="strength-tag t-infl">존재감</span>
+            <span class="strength-tag t-infl">사교성</span>
+          </div>
+        </div>
+      </div>
     </div>
     <div class="domain-card d-rel">
-      <div class="domain-num">03</div>
-      <h3>대인관계구축</h3>
-      <div class="domain-en">RELATIONSHIP BUILDING</div>
-      <p>사람과 사람을 잇는 힘. 팀을 하나로 묶고 깊은 신뢰를 만들어 냅니다.</p>
+      <div class="flip-inner">
+        <div class="flip-front">
+          <div class="domain-num">03</div>
+          <h3>대인관계구축</h3>
+          <div class="domain-en">RELATIONSHIP BUILDING</div>
+          <p>사람과 사람을 잇는 힘. 팀을 하나로 묶고 깊은 신뢰를 만들어 냅니다.</p>
+        </div>
+        <div class="flip-back">
+          <div class="domain-en">RELATIONSHIP BUILDING</div>
+          <div class="theme-tags">
+            <span class="strength-tag t-rel">적응</span>
+            <span class="strength-tag t-rel">연결성</span>
+            <span class="strength-tag t-rel">개발</span>
+            <span class="strength-tag t-rel">공감</span>
+            <span class="strength-tag t-rel">화합</span>
+            <span class="strength-tag t-rel">포용</span>
+            <span class="strength-tag t-rel">개별화</span>
+            <span class="strength-tag t-rel">긍정</span>
+            <span class="strength-tag t-rel">절친</span>
+          </div>
+        </div>
+      </div>
     </div>
     <div class="domain-card d-strat">
-      <div class="domain-num">04</div>
-      <h3>전략적사고</h3>
-      <div class="domain-en">STRATEGIC THINKING</div>
-      <p>정보를 분석하고 더 나은 길을 그리는 힘. 미래를 먼저 내다봅니다.</p>
+      <div class="flip-inner">
+        <div class="flip-front">
+          <div class="domain-num">04</div>
+          <h3>전략적사고</h3>
+          <div class="domain-en">STRATEGIC THINKING</div>
+          <p>정보를 분석하고 더 나은 길을 그리는 힘. 미래를 먼저 내다봅니다.</p>
+        </div>
+        <div class="flip-back">
+          <div class="domain-en">STRATEGIC THINKING</div>
+          <div class="theme-tags">
+            <span class="strength-tag t-strat">분석</span>
+            <span class="strength-tag t-strat">회고</span>
+            <span class="strength-tag t-strat">미래지향</span>
+            <span class="strength-tag t-strat">발상</span>
+            <span class="strength-tag t-strat">수집</span>
+            <span class="strength-tag t-strat">지적사고</span>
+            <span class="strength-tag t-strat">배움</span>
+            <span class="strength-tag t-strat">전략</span>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </section>
@@ -178,191 +254,133 @@
 <section class="section report reveal" id="report">
   <div class="section-eyebrow">MIRA HUVE STRENGTH REPORT · 리포트</div>
   <h2 class="section-title">나의 강점을<br><span class="accent">리포트</span>로 받아보세요.</h2>
-  <p class="report-intro">MIRA HUVE는 갤럽 CliftonStrengths 진단 결과를 바탕으로 일과 관계, 삶에서 드러나는 당신만의 방식을 해석합니다. 기본 리포트로 전체 흐름을 확인한 뒤, 궁금한 주제를 선택해 더 깊이 살펴볼 수 있습니다.</p>
+  <p class="report-intro">MIRA HUVE는 갤럽 CliftonStrengths 진단 결과를 바탕으로 일과 관계, 삶에서 드러나는 당신만의 방식을 해석합니다. 강점 총평부터 커리어·관계·팀·의사결정까지 다섯 가지 관점을 담은 기본 리포트에, 내가 살아가는 여러 역할에 맞춘 추가 옵션을 더할 수 있습니다.</p>
 
   <div class="report-grid">
     <div class="report-card report-base">
       <div class="report-tag">BASIC</div>
       <h3>강점 총평</h3>
-      <p>Top5 강점 해석과 핵심 패턴 요약</p>
+      <p>Top10 강점 해석과 핵심 패턴 요약</p>
     </div>
     <div class="report-card">
-      <div class="report-tag">ADD-ON</div>
+      <div class="report-tag">INCLUDED</div>
       <h3>커리어·성과</h3>
       <p>일에서 나의 강점을 쓰는 법</p>
     </div>
     <div class="report-card">
-      <div class="report-tag">ADD-ON</div>
-      <h3>관계·연애</h3>
+      <div class="report-tag">INCLUDED</div>
+      <h3>관계·소통</h3>
       <p>사람과의 관계에서 드러나는 강점</p>
     </div>
     <div class="report-card">
-      <div class="report-tag">ADD-ON</div>
+      <div class="report-tag">INCLUDED</div>
       <h3>팀·리더십</h3>
       <p>조직과 팀 안에서의 나의 역할</p>
     </div>
+    <div class="report-card">
+      <div class="report-tag">INCLUDED</div>
+      <h3>의사결정·위기대응</h3>
+      <p>결정을 내리고 어려운 순간을 통과하는 법</p>
+    </div>
+    <div class="report-card report-card-wide">
+      <div class="report-tag">OPTION</div>
+      <h3>추가 옵션 · 내 사용 보고서</h3>
+      <p>같은 강점도 부모로서, 애인으로서, 팀장으로서 있을 때 다르게 쓰입니다. 필요한 관계·역할을 골라 리포트에 더할 수 있어요.</p>
+      <div class="addon-tag-list">
+        <span>부모</span><span>자식</span><span>애인</span><span>스타트업 대표</span><span>팀장</span><span>동료</span><span>AI Builder</span><span>기타(직접 입력)</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="report-package">
+    <s>100,000원</s> <strong>80,000원</strong>
   </div>
 
   <div class="report-cta">
-    <span class="report-badge">출시예정</span>
-    <a class="btn-primary" href="mailto:mira@mirahuve.com?subject=%EA%B0%95%EC%A0%90%20%EB%A6%AC%ED%8F%AC%ED%8A%B8%20%EC%B6%9C%EC%8B%9C%20%EC%95%8C%EB%A6%BC%20%EC%8B%A0%EC%B2%AD">출시 알림 받기</a>
+    <a class="btn-primary" href="report-apply.html">신청하러 가기</a>
+  </div>
+</section>
+
+<!-- ============ PAIR REPORT (MIRA HUVE 관계 리포트) ============ -->
+<section class="section report reveal" id="pairReport">
+  <div class="section-eyebrow">MIRA HUVE RELATIONSHIP REPORT · 관계 리포트</div>
+  <h2 class="section-title">우리의 강점을<br><span class="accent">리포트</span>로 받아보세요.</h2>
+  <p class="report-intro">두 사람의 강점 데이터를 나란히 놓고 해석합니다. 애인·부부·친구부터 부모-자식, 형제자매, 동료·팀장·대표까지 — 관계와 역할에 따라 서로의 강점이 어떻게 부딪히고 보완되는지 살펴봅니다.</p>
+
+  <div class="report-grid">
+    <div class="report-card report-base">
+      <div class="report-tag">COUPLE</div>
+      <h3>애인·부부</h3>
+      <p>연인·배우자 사이, 서로의 강점이 부딪히고 보완되는 지점</p>
+    </div>
+    <div class="report-card">
+      <div class="report-tag">FRIEND</div>
+      <h3>친구</h3>
+      <p>오래가는 우정을 만드는 강점의 궁합</p>
+    </div>
+    <div class="report-card">
+      <div class="report-tag">FAMILY</div>
+      <h3>가족·부모-자식</h3>
+      <p>세대를 잇는 이해의 언어</p>
+    </div>
+    <div class="report-card">
+      <div class="report-tag">SIBLING</div>
+      <h3>형제자매</h3>
+      <p>가장 가까운 만큼 자주 부딪히는 관계의 재발견</p>
+    </div>
+    <div class="report-card">
+      <div class="report-tag">ORG</div>
+      <h3>동료·팀장·대표</h3>
+      <p>함께 일하는 사이에서 드러나는 역할별 강점</p>
+    </div>
+  </div>
+
+  <div class="report-package">
+    <s>200,000원</s> <strong>150,000원</strong>
+  </div>
+
+  <div class="report-cta">
+    <a class="btn-primary" href="pair-report-apply.html">신청하러 가기</a>
   </div>
 </section>
 
 <!-- ============ SERVICES ============ -->
 <section class="section services reveal" id="services">
-  <div class="section-eyebrow">SERVICES · 서비스</div>
-  <h2 class="section-title">당신에게 맞는<br><span class="accent">코칭</span>을 선택하세요.</h2>
+  <div class="section-eyebrow">MIRA HUVE COACHING · 코칭</div>
+  <h2 class="section-title">리포트 너머의 이야기를<br><span class="accent">코칭</span>에서 만나보세요.</h2>
+  <p class="report-intro">리포트로 부족하다면, 직접 코칭을 받아보세요. 나의 강점을 실제 삶과 일, 관계 안에서 어떻게 쓸지 — 1:1 코칭에서 함께 찾습니다.</p>
 
   <div class="service-grid">
     <div class="service-card">
       <div class="svc-tag">INDIVIDUAL</div>
       <h3>개인 상담</h3>
       <div class="svc-meta">1:1 맞춤 코칭 · 60분 · 대면·온라인</div>
-      <p>나의 상위 강점 테마를 분석하고, 일상과 커리어에서 어떻게 활용할 수 있는지 구체적인 전략을 함께 만듭니다. 자기 이해와 진로 탐색에 특히 효과적입니다.</p>
-      <div class="svc-price">15만원</div>
-      <div class="svc-price-sub">갤럽 코드 포함</div>
-      <button class="btn-card" data-service="individual">이 상담 예약하기</button>
+      <p>리포트로 확인한 나의 강점을 일과 삶에서 실제로 어떻게 쓸지, 나에게 가장 자연스러운 방식을 함께 찾습니다.</p>
     </div>
     <div class="service-card">
       <div class="svc-tag">COUPLE</div>
       <h3>연인·부부 상담</h3>
       <div class="svc-meta">90분 · 대면·온라인</div>
-      <p>두 사람의 강점을 나란히 펼쳐 봅니다. 서로 다른 재능이 어떻게 부딪히고 또 보완되는지 이해하고, 관계를 잇는 새로운 언어를 함께 찾습니다.</p>
-      <div class="svc-price">25만원</div>
-      <div class="svc-price-sub">2인 · 갤럽 코드 포함</div>
-      <button class="btn-card" data-service="couple">이 상담 예약하기</button>
+      <p>두 사람의 강점을 나란히 펼쳐 봅니다. 서로 다른 재능이 부딪히고 또 보완되는 지점에서, 관계를 잇는 새로운 언어를 함께 찾습니다.</p>
     </div>
     <div class="service-card">
       <div class="svc-tag">YOUTH · PARENT</div>
       <h3>청소년·학부모 상담</h3>
       <div class="svc-meta">90분 · 대면·온라인</div>
-      <p>자녀의 타고난 재능 패턴을 함께 탐색하고, 부모-자녀 간 이해의 언어를 만듭니다. 진로 고민, 학습 동기, 관계 갈등에 새로운 관점을 제공합니다.</p>
-      <div class="svc-price">28만원 <span class="per">/ 부모 1인</span></div>
-      <div class="svc-price-sub">부모 2인 33만원 · 갤럽 코드 포함</div>
-      <button class="btn-card" data-service="youth">이 상담 예약하기</button>
+      <p>자녀가 타고난 재능의 결을 함께 살핍니다. 진로와 학습, 마음의 거리까지 — 부모와 자녀 사이를 잇는 이해의 언어를 만듭니다.</p>
     </div>
 
     <div class="service-card">
       <div class="svc-tag">TEAM</div>
       <h3>팀 워크숍</h3>
       <div class="svc-meta">2시간 · 대면</div>
-      <p>팀원 각자의 강점을 이해하고, 서로의 재능을 보완적으로 활용하는 팀 문화를 설계합니다. 스타트업부터 대기업 팀까지 커스터마이징 가능합니다.</p>
-      <div class="svc-price">100만원</div>
-      <div class="svc-price-sub">갤럽 코드 별도</div>
-      <button class="btn-card" data-service="team">이 워크숍 예약하기</button>
+      <p>팀원 각자의 강점을 나란히 펼쳐 보고, 서로의 재능이 맞물리는 우리 팀만의 언어를 함께 설계합니다. 스타트업부터 큰 조직까지 팀에 맞춰 진행합니다.</p>
     </div>
   </div>
-</section>
 
-<!-- ============ PROCESS ============ -->
-<section class="section process reveal" id="process">
-  <div class="section-eyebrow">PROCESS · 진행 과정</div>
-  <h2 class="section-title">예약에서 시작해 <span class="accent">나를 이해하는 시간</span>으로.</h2>
-  <div class="process-line">
-    <div class="proc-step">
-      <div class="proc-dot">1</div>
-      <h4>예약 신청</h4>
-      <p>원하는 서비스와 날짜·시간을 선택해 신청합니다.</p>
-    </div>
-    <div class="proc-step">
-      <div class="proc-dot">2</div>
-      <h4>테스트 코드 발송</h4>
-      <p>예약이 접수되면 강점 진단(갤럽 CliftonStrengths) 코드를 보내드립니다.</p>
-    </div>
-    <div class="proc-step">
-      <div class="proc-dot">3</div>
-      <h4>진단 &amp; 리포트</h4>
-      <p>받으신 코드로 진단을 마치면, 결과 리포트를 바탕으로 상담을 준비합니다.</p>
-    </div>
-    <div class="proc-step">
-      <div class="proc-dot">4</div>
-      <h4>상담 진행</h4>
-      <p>당신의 별을 함께 잇습니다. 강점을 삶과 일에 어떻게 쓸지 찾습니다.</p>
-    </div>
+  <div class="report-cta">
+    <a class="btn-primary" href="booking-apply.html">신청하러 가기</a>
   </div>
-</section>
-
-<!-- ============ BOOKING ============ -->
-<section class="section booking reveal" id="booking">
-  <div class="section-eyebrow">BOOKING · 예약</div>
-  <h2 class="section-title"><span class="accent">나를 이해하는 시간</span>을 예약하세요.</h2>
-  <p class="prereq-banner small">예약하시면 <strong>강점 진단 테스트 코드</strong>를 보내드립니다. 받으신 코드로 진단을 진행하시면 됩니다. 이미 결과지가 있으시면 아래에 체크해 주세요. <strong>상담비를 40% 할인</strong>해 드립니다.</p>
-  <p class="booking-note">상담일 24시간 전까지 테스트가 완료되지 않으면 예약이 자동 취소됩니다. 테스트는 30~40분 방해받지 않는 시간이 필요합니다.</p>
-  <p class="booking-note">서비스 제공 시기 · 본 서비스는 비대면 또는 대면 상담 서비스로, 결제 완료 후 고객님이 선택하신 예약 일자·시간에 상담이 제공됩니다. 예약은 <strong>결제일로부터 2일 뒤 ~ 90일 이내</strong>에서 선택 가능합니다.</p>
-
-  <form id="bookingForm" class="booking-card" autocomplete="off">
-    <div class="field">
-      <label>1. 서비스 선택</label>
-      <div class="service-pick" id="servicePick">
-        <button type="button" class="pick" data-service="individual"><strong>개인 상담</strong><span>60분 · 대면·온라인</span></button>
-        <button type="button" class="pick" data-service="couple"><strong>연인·부부 상담</strong><span>90분 · 대면·온라인</span></button>
-        <button type="button" class="pick" data-service="youth"><strong>청소년·학부모 상담</strong><span>90분 · 대면·온라인</span></button>
-        <button type="button" class="pick" data-service="team"><strong>팀 워크숍</strong><span>2시간 · 전일</span></button>
-      </div>
-    </div>
-
-    <div class="field">
-      <label for="bDate">2. 날짜 선택</label>
-      <input type="date" id="bDate" required>
-      <small class="hint" id="dateHint">서비스를 먼저 선택해 주세요.</small>
-    </div>
-
-    <div class="field">
-      <label>3. 시간 선택</label>
-      <div class="slot-grid" id="slotGrid"><span class="slot-empty">날짜를 선택하면 가능한 시간이 표시됩니다.</span></div>
-    </div>
-
-    <div class="field-row">
-      <div class="field">
-        <label for="bName">이름</label>
-        <input type="text" id="bName" required>
-      </div>
-      <div class="field">
-        <label for="bPhone">연락처</label>
-        <input type="tel" id="bPhone" placeholder="010-0000-0000" required>
-      </div>
-    </div>
-
-    <div class="field">
-      <label for="bEmail">이메일</label>
-      <input type="email" id="bEmail" placeholder="example@email.com" required>
-    </div>
-
-    <div class="field">
-      <label for="bPurpose">상담 목적</label>
-      <select id="bPurpose">
-        <option value="자기 이해">자기 이해 · 강점 발견</option>
-        <option value="진로 · 방향">진로 · 방향 설정</option>
-        <option value="관계">관계 · 소통</option>
-        <option value="팀 · 조직">팀 · 조직 빌딩</option>
-        <option value="기타">기타</option>
-      </select>
-    </div>
-
-    <div class="field">
-      <label for="bDetail">고민 또는 궁금한 이야기</label>
-      <textarea id="bDetail" rows="3" placeholder="어떤 마음으로 오시는지 자유롭게 적어주세요."></textarea>
-    </div>
-
-    <div class="field check">
-      <label class="checkbox">
-        <input type="checkbox" id="bReport">
-        <span>이미 강점 진단 결과지를 가지고 있습니다. 업로드하시면 상담비를 <strong>40% 할인</strong>해 드려요.</span>
-      </label>
-    </div>
-
-    <div class="field report-upload" id="reportUploadWrap" hidden>
-      <label for="bReportFile">강점 진단 결과지 업로드 (PDF · 이미지)</label>
-      <input type="file" id="bReportFile" accept=".pdf,.png,.jpg,.jpeg,.webp">
-      <small class="hint">업로드가 확인되면 결제 금액에 40% 할인이 자동 적용됩니다.</small>
-    </div>
-
-    <div class="price-line" id="pricePreview" hidden></div>
-
-    <button type="submit" class="btn-primary full" id="submitBtn">예약 신청하기</button>
-    <div class="form-msg" id="formMsg"></div>
-  </form>
 </section>
 
 <!-- ============ FOOTER ============ -->
@@ -426,6 +444,8 @@
     <div class="admin-dash" id="adminDash" hidden>
       <div class="admin-tabs">
         <button class="atab active" data-tab="bookings">예약 목록</button>
+        <button class="atab" data-tab="reports">리포트 주문</button>
+        <button class="atab" data-tab="pairReports">관계 리포트 주문</button>
         <button class="atab" data-tab="blocks">시간 차단</button>
       </div>
 
@@ -440,6 +460,30 @@
           <button class="fbtn" data-status="cancelled">취소</button>
         </div>
         <div class="booking-list" id="bookingList"><p class="muted">불러오는 중…</p></div>
+      </div>
+
+      <!-- 리포트 주문 -->
+      <div class="admin-panel" id="panelReports" hidden>
+        <div class="filter-row" id="reportStatusFilter">
+          <button class="fbtn active" data-status="all">전체</button>
+          <button class="fbtn" data-status="pending">대기</button>
+          <button class="fbtn" data-status="confirmed">확정</button>
+          <button class="fbtn" data-status="completed">완료</button>
+          <button class="fbtn" data-status="cancelled">취소</button>
+        </div>
+        <div class="booking-list" id="reportOrderList"><p class="muted">불러오는 중…</p></div>
+      </div>
+
+      <!-- 관계 리포트 주문 -->
+      <div class="admin-panel" id="panelPairReports" hidden>
+        <div class="filter-row" id="pairReportStatusFilter">
+          <button class="fbtn active" data-status="all">전체</button>
+          <button class="fbtn" data-status="pending">대기</button>
+          <button class="fbtn" data-status="confirmed">확정</button>
+          <button class="fbtn" data-status="completed">완료</button>
+          <button class="fbtn" data-status="cancelled">취소</button>
+        </div>
+        <div class="booking-list" id="pairReportOrderList"><p class="muted">불러오는 중…</p></div>
       </div>
 
       <!-- 시간 차단 -->

@@ -16,6 +16,52 @@ const SUBMIT_LABEL = PAYMENT_ENABLED ? '결제하고 예약 신청하기' : '예
 
 function genPaymentId(){ return 'mh_' + Date.now() + '_' + Math.random().toString(36).slice(2,8); }
 
+/* ---- 결제 리다이렉트 복귀 처리 ----
+   모바일에서는 결제창이 페이지 전체를 PG로 이동시켰다가 redirectUrl로 돌아온다.
+   돌아오면 JS 상태가 초기화되므로, 결제 직전 주문 내용을 sessionStorage에 보관해 두고
+   복귀 시 paymentId/code 파라미터를 읽어 저장을 마저 완료한다. */
+const PENDING_ORDER_KEY = 'mh_pending_order';
+function stashPendingOrder(kind, row){ try{ sessionStorage.setItem(PENDING_ORDER_KEY, JSON.stringify({ kind, row })); }catch(e){} }
+function readPendingOrder(){ try{ return JSON.parse(sessionStorage.getItem(PENDING_ORDER_KEY)||'null'); }catch(e){ return null; } }
+function clearPendingOrder(){ try{ sessionStorage.removeItem(PENDING_ORDER_KEY); }catch(e){} }
+
+async function handlePaymentRedirect(){
+  const params = new URLSearchParams(location.search);
+  const paymentId = params.get('paymentId');
+  if(!paymentId && !params.get('transactionType')) return;   // 결제 복귀가 아님
+  const code = params.get('code');                            // 있으면 실패/취소
+  history.replaceState(null, '', location.pathname + location.hash); // 새로고침 시 중복 저장 방지
+  const pending = readPendingOrder();
+  if(!pending || !pending.row) return;
+  const msg = $({ booking:'#formMsg', report:'#reportFormMsg', pair:'#pairFormMsg' }[pending.kind] || '#formMsg');
+  if(code != null){
+    clearPendingOrder();
+    if(msg) fail(msg,'결제가 취소되었거나 완료되지 않았습니다. 다시 시도해 주세요.');
+    return;
+  }
+  const row = pending.row;
+  row.payment_id = paymentId;
+  row.pay_method = 'card';
+  row.payment_status = 'paid'; // ⚠ 서버 검증 전 상태. 추후 Edge Function 검증 연동 필요.
+  try{
+    if(pending.kind==='booking'){ await db.createBooking(row); slotCache.delete(row.booking_date); }
+    else if(pending.kind==='report'){ await db.createReportOrder(row); }
+    else if(pending.kind==='pair'){ await db.createPairReportOrder(row); }
+    clearPendingOrder();
+    if(msg){
+      msg.className='form-msg ok';
+      msg.textContent='결제가 완료되어 신청이 접수되었습니다. 안내 메일을 곧 보내드릴게요. 감사합니다.';
+      msg.scrollIntoView({ block:'center' });
+    }
+  }catch(err){
+    console.error(err);
+    if(msg){
+      fail(msg,'결제는 완료되었지만 접수 저장 중 오류가 발생했습니다. 010-5205-5870 또는 mira@mirahuve.com으로 연락 주시면 바로 도와드리겠습니다.');
+      msg.scrollIntoView({ block:'center' });
+    }
+  }
+}
+
 /* 결제창 호출 (성공 시 {paymentId} 반환, 실패/취소 시 throw) */
 async function requestPortonePayment({ amount, orderName, customer }){
   if(!window.PortOne) throw new Error('PORTONE_SDK_MISSING');
@@ -55,6 +101,64 @@ const SERVICES = {
     slots:['09:00','10:30','12:00','13:30','15:00','16:30','18:00','20:00'] }
 };
 const REPORT_DISCOUNT = 40; // 결과지 업로드 시 할인율(%)
+
+/* ---- 강점 리포트 신청(추가 옵션 결제) ---- */
+const REPORT_BASE_PRICE = 80000;       // 기본 리포트(강점총평+커리어+관계+팀·리더십+의사결정) 정상가 100,000원 → 할인
+const REPORT_BASE_PRICE_ORIG = 100000;
+const REPORT_BASE_PRICE_WITH_REPORT = 40000; // 기존 강점(34개) 결과지 업로드 시 기본 리포트 가격 — 추가 옵션 가격은 동일
+/* 추가 옵션(페르소나) 가격 — 선택한 총 개수에 따라 개당 단가가 정해진다(전체 개수에 동일 단가 적용).
+   1개 선택: 개당 10,000원 · 2개: 개당 7,000원 · 3개: 개당 6,000원 · 4개 이상: 개당 5,000원. */
+const REPORT_OPTION_NOMINAL_PRICE = 10000;          // 정가 비교용(할인 전 기준가), 개당
+
+function reportOptionUnitPrice(n){
+  if(n <= 1) return 10000;
+  if(n === 2) return 7000;
+  if(n === 3) return 6000;
+  return 5000;
+}
+
+function reportOptionsTotal(n){
+  return n * reportOptionUnitPrice(n);
+}
+const PERSONAS = {
+  parent:    { label:'부모로서의 나는?' },
+  child:     { label:'자식으로서의 나는?' },
+  lover:     { label:'애인으로서의 나는?' },
+  founder:   { label:'스타트업대표로서의 나는?' },
+  teamlead:  { label:'조직의 팀장으로서 나는?' },
+  colleague: { label:'조직의 동료로서의 나는?' },
+  aibuilder: { label:'AI Builder로서의 나는?' },
+  custom:    { label:'기타 (직접 입력)' }
+};
+const REPORT_SUBMIT_LABEL = PAYMENT_ENABLED ? '결제하고 리포트 신청하기' : '리포트 신청하기';
+
+/* ---- 관계 리포트(두 사람) 신청 ---- */
+const PAIR_REPORT_PRICE_ORIG = 200000;
+/* 강점 진단 결과지를 이미 가진 인원 수에 따른 할인 — 0명 150,000원 · 1명 130,000원 · 2명 100,000원 */
+const PAIR_REPORT_PRICE_BY_REPORT_COUNT = [150000, 130000, 100000];
+function pairReportPrice(p1HasReport, p2HasReport){
+  const n = (p1HasReport?1:0) + (p2HasReport?1:0);
+  return PAIR_REPORT_PRICE_BY_REPORT_COUNT[n];
+}
+/* 관계 유형 — roles가 있으면 비대칭 관계(두 사람에게 서로 다른 역할을 배정해야 함), null이면 대칭 관계 */
+const RELATIONSHIPS = {
+  lover:   { label:'애인',      roles:null },
+  couple:  { label:'부부',      roles:null },
+  friend:  { label:'친구',      roles:null },
+  family:  { label:'부모자식',   roles:['부모','자식'] },
+  sibling: { label:'형제자매',   roles:['형·언니·오빠','동생'] },
+  org_peer:{ label:'동료 · 동료', roles:null },
+  org_lead:{ label:'팀장 · 팀원', roles:['팀장','팀원'] },
+  org_ceo: { label:'대표 · 직원', roles:['대표','직원'] }
+};
+/* 대칭 관계(roles:null)의 사람1/사람2 헤더 라벨 — "나"를 신청자 기준으로 표시 */
+const SYMMETRIC_PERSON_LABELS = {
+  lover:    ['나','나의 연인'],
+  couple:   ['나','나의 배우자'],
+  friend:   ['나','나의 친구'],
+  org_peer: ['나','나의 동료']
+};
+const PAIR_SUBMIT_LABEL = PAYMENT_ENABLED ? '결제하고 신청하기' : '신청하기';
 /* 예약 가능기간 — 오늘부터 MIN_LEAD_DAYS 뒤 ~ WINDOW_DAYS 이내에서만 예약 가능 */
 const BOOKING_MIN_LEAD_DAYS = 2;   // 상담 24h 전 테스트 완료 필요 → 최소 2일 뒤부터
 const BOOKING_WINDOW_DAYS   = 90;  // 이니시스 계약조건 기준 90일 이내
@@ -162,12 +266,57 @@ const db = {
   async removeBlock(id){
     const { error } = await sbClient.from('blocked_slots').delete().eq('id',id);
     if(error) throw error;
+  },
+  async createReportOrder(row){
+    if(!CONFIGURED) throw new Error('NOT_CONFIGURED');
+    const { error } = await sbClient.from('report_orders').insert([row]);
+    if(error) throw error;
+    return true;
+  },
+  async listReportOrders(){
+    if(!CONFIGURED) return [];
+    const { data, error } = await sbClient.from('report_orders').select('*').order('created_at',{ascending:false});
+    if(error) throw error;
+    return data||[];
+  },
+  async updateReportOrder(id, patch){
+    patch.updated_at = new Date().toISOString();
+    const { error } = await sbClient.from('report_orders').update(patch).eq('id',id);
+    if(error) throw error;
+  },
+  async createPairReportOrder(row){
+    if(!CONFIGURED) throw new Error('NOT_CONFIGURED');
+    const { error } = await sbClient.from('pair_report_orders').insert([row]);
+    if(error) throw error;
+    return true;
+  },
+  async listPairReportOrders(){
+    if(!CONFIGURED) return [];
+    const { data, error } = await sbClient.from('pair_report_orders').select('*').order('created_at',{ascending:false});
+    if(error) throw error;
+    return data||[];
+  },
+  async updatePairReportOrder(id, patch){
+    patch.updated_at = new Date().toISOString();
+    const { error } = await sbClient.from('pair_report_orders').update(patch).eq('id',id);
+    if(error) throw error;
   }
 };
 
 /* =========================================================
    네비게이션 / 스크롤 리빌
    ========================================================= */
+/* 강점 4대 영역 카드 — 호버 시 뒤집혀 개별 강점 테마를 보여줌. 터치·키보드 사용자를 위해 탭/Enter로도 토글 */
+function initDomainFlip(){
+  $$('.domain-card').forEach(card=>{
+    card.setAttribute('tabindex','0');
+    card.addEventListener('click', ()=> card.classList.toggle('flipped'));
+    card.addEventListener('keydown', e=>{
+      if(e.key==='Enter' || e.key===' '){ e.preventDefault(); card.classList.toggle('flipped'); }
+    });
+  });
+}
+
 function initNav(){
   const toggle = $('#navToggle'), links = $('#navLinks');
   toggle?.addEventListener('click', ()=> links.classList.toggle('open'));
@@ -189,17 +338,14 @@ function initBooking(){
   dateInput.min = minBookDate();
   dateInput.max = maxBookDate();
 
-  // 서비스 카드(상단) → 폼으로 스크롤 + 선택
-  $$('.btn-card').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      selectService(btn.dataset.service);
-      $('#booking').scrollIntoView({behavior:'smooth'});
-    });
-  });
   // 폼 안 서비스 선택
   $$('#servicePick .pick').forEach(btn=>{
     btn.addEventListener('click', ()=> selectService(btn.dataset.service));
   });
+
+  // 홈페이지 서비스 카드에서 ?service=키 로 넘어온 경우 해당 서비스를 미리 선택해 둔다
+  const preselect = new URLSearchParams(location.search).get('service');
+  if(preselect && SERVICES[preselect]) selectService(preselect);
 
   dateInput.addEventListener('change', ()=>{ state.date = dateInput.value; state.time=null; renderSlots(); });
 
@@ -376,9 +522,16 @@ async function submitBooking(ev){
 
   const btn = $('#submitBtn'); btn.disabled=true; btn.textContent='접수 중…';
   try{
-    // 0) 결제 (활성화된 경우에만)
+    // 1) 결과지 업로드 — 결제 전에 먼저. 모바일 결제는 페이지가 PG로 이동했다가 돌아오므로
+    //    File 객체가 유지되지 않는다. 업로드 경로만 row에 담아 sessionStorage로 보관한다.
+    if(wantReport && file){
+      btn.textContent='결과지 업로드 중…';
+      row.report_path = await db.uploadReport(file);
+    }
+    // 2) 결제 (활성화된 경우에만)
     if(PAYMENT_ENABLED){
       btn.textContent='결제 진행 중…';
+      stashPendingOrder('booking', row);   // 모바일 리다이렉트 복귀용
       try{
         const pay = await requestPortonePayment({
           amount: final, orderName: svc.label,
@@ -388,6 +541,7 @@ async function submitBooking(ev){
         row.pay_method = 'card';
         row.payment_status = 'paid'; // ⚠ 서버 검증 전 상태. 추후 Edge Function 검증 연동 필요.
       }catch(pe){
+        clearPendingOrder();
         btn.disabled=false; btn.textContent=SUBMIT_LABEL;
         if(pe.message==='CHANNEL_NOT_SET' || pe.message==='PORTONE_SDK_MISSING'){
           return fail(msg,'결제 설정이 아직 완료되지 않았습니다. 잠시 후 다시 시도해 주세요.');
@@ -395,13 +549,9 @@ async function submitBooking(ev){
         return fail(msg,'결제가 취소되었거나 완료되지 않았습니다. 다시 시도해 주세요.');
       }
     }
-    // 1) 결과지 업로드 (결제 성공 후)
-    if(wantReport && file){
-      btn.textContent='결과지 업로드 중…';
-      row.report_path = await db.uploadReport(file);
-    }
-    // 2) 예약 저장
+    // 3) 예약 저장
     await db.createBooking(row);
+    clearPendingOrder();
     slotCache.delete(row.booking_date);   // 방금 예약한 날짜 캐시 무효화 → 즉시 마감 반영
     msg.className='form-msg ok';
     msg.textContent = PAYMENT_ENABLED
@@ -430,10 +580,350 @@ async function submitBooking(ev){
 function fail(el,t){ el.className='form-msg err'; el.textContent=t; }
 
 /* =========================================================
+   강점 리포트 신청 폼
+   ========================================================= */
+const reportState = { personas: new Set(), customList: [] };
+
+function initReportOrder(){
+  $$('#personaPick .persona').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const key = btn.dataset.persona;
+      if(key === 'custom'){
+        const wrap = $('#customPersonaWrap');
+        wrap.hidden = !wrap.hidden;
+        btn.classList.toggle('active', !wrap.hidden);
+        if(!wrap.hidden){ $('#rCustomPersona').focus(); }
+        else {
+          // 닫으면 선택 해제로 간주 — 추가해 둔 직접입력 옵션도 비워 가격에서 제외한다
+          reportState.customList = [];
+          $('#rCustomPersona').value = '';
+          renderCustomPersonaList();
+          updateReportPricePreview();
+        }
+        return;
+      }
+      if(reportState.personas.has(key)){ reportState.personas.delete(key); btn.classList.remove('active'); }
+      else { reportState.personas.add(key); btn.classList.add('active'); }
+      updateReportPricePreview();
+    });
+  });
+
+  $('#rCustomPersonaAdd').addEventListener('click', addCustomPersona);
+  $('#rCustomPersona').addEventListener('keydown', e=>{
+    if(e.key==='Enter'){ e.preventDefault(); addCustomPersona(); }
+  });
+
+  $('#rHasReport').addEventListener('change', e=>{
+    $('#rReportUploadWrap').hidden = !e.target.checked;
+    if(!e.target.checked) $('#rReportFile').value = '';
+    updateReportPricePreview();
+  });
+
+  updateReportPricePreview();
+  $('#reportOrderForm').addEventListener('submit', submitReportOrder);
+  const sb = $('#reportSubmitBtn'); if(sb) sb.textContent = REPORT_SUBMIT_LABEL;
+}
+
+function addCustomPersona(){
+  const input = $('#rCustomPersona');
+  const text = input.value.trim();
+  if(!text) return;
+  reportState.customList.push(text);
+  input.value = '';
+  input.focus();
+  renderCustomPersonaList();
+  updateReportPricePreview();
+}
+
+function renderCustomPersonaList(){
+  const box = $('#customPersonaList');
+  box.innerHTML = '';
+  reportState.customList.forEach((text, idx)=>{
+    const chip = document.createElement('span');
+    chip.className = 'custom-chip';
+    chip.innerHTML = `${esc(text)} <button type="button" aria-label="삭제">×</button>`;
+    chip.querySelector('button').addEventListener('click', ()=>{
+      reportState.customList.splice(idx, 1);
+      renderCustomPersonaList();
+      updateReportPricePreview();
+    });
+    box.appendChild(chip);
+  });
+}
+
+function reportPersonaCount(){ return reportState.personas.size + reportState.customList.length; }
+
+function updateReportPricePreview(){
+  const box = $('#reportPricePreview');
+  const n = reportPersonaCount();
+  const hasReport = $('#rHasReport').checked;
+  const base = hasReport ? REPORT_BASE_PRICE_WITH_REPORT : REPORT_BASE_PRICE;
+  const total = base + reportOptionsTotal(n);
+  const totalOrig = REPORT_BASE_PRICE_ORIG + n * REPORT_OPTION_NOMINAL_PRICE;
+  box.innerHTML = `<s>${won(totalOrig)}</s> <strong>${won(total)}</strong>`
+    + (n > 0 ? ` <em>(기본 리포트 + 추가 옵션 ${n}개)</em>` : ` <em>(기본 리포트)</em>`)
+    + (hasReport ? ` <em>· 결과지 보유 할인 적용</em>` : '');
+}
+
+async function submitReportOrder(ev){
+  ev.preventDefault();
+  const msg = $('#reportFormMsg'); msg.className='form-msg'; msg.textContent='';
+
+  const name = $('#rName').value.trim();
+  const phone = $('#rPhone').value.trim();
+  const email = $('#rEmail').value.trim();
+  if(!name || !phone || !email){ return fail(msg,'이름·연락처·이메일을 모두 입력해 주세요.'); }
+
+  // 입력창에 남아있지만 아직 '추가'를 안 누른 직접입력 옵션은 제출 시 자동으로 포함시킨다
+  const leftover = $('#rCustomPersona').value.trim();
+  if(leftover){ reportState.customList.push(leftover); $('#rCustomPersona').value=''; renderCustomPersonaList(); }
+
+  const wantReport = $('#rHasReport').checked;
+  const file = $('#rReportFile').files[0] || null;
+  if(wantReport && !file){
+    return fail(msg,'강점 진단 결과지 파일을 업로드해 주세요.');
+  }
+
+  const personaList = [...reportState.personas].map(k=> PERSONAS[k].label).concat(reportState.customList);
+  const n = reportPersonaCount();
+  const hasReport = !!(wantReport && file);
+  const basePrice = hasReport ? REPORT_BASE_PRICE_WITH_REPORT : REPORT_BASE_PRICE;
+  const addonPrice = reportOptionsTotal(n);
+  const total = basePrice + addonPrice;
+
+  const row = {
+    customer_name: name,
+    customer_phone: phone,
+    customer_email: email,
+    personas: personaList,
+    persona_count: n,
+    base_price: basePrice,
+    addon_price: addonPrice,
+    total_price: total,
+    has_report: hasReport,
+    status: 'pending'
+  };
+
+  const btn = $('#reportSubmitBtn'); btn.disabled=true; btn.textContent='접수 중…';
+  try{
+    // 결과지 업로드를 결제보다 먼저 — 모바일 리다이렉트 복귀 시 File 객체가 유실되기 때문
+    if(hasReport){
+      btn.textContent='결과지 업로드 중…';
+      row.report_path = await db.uploadReport(file);
+    }
+    if(PAYMENT_ENABLED){
+      btn.textContent='결제 진행 중…';
+      stashPendingOrder('report', row);   // 모바일 리다이렉트 복귀용
+      try{
+        const pay = await requestPortonePayment({
+          amount: total, orderName: '미라휴브 강점 리포트',
+          customer: { name, phone, email }
+        });
+        row.payment_id = pay.paymentId;
+        row.pay_method = 'card';
+        row.payment_status = 'paid'; // ⚠ 서버 검증 전 상태. 추후 Edge Function 검증 연동 필요.
+      }catch(pe){
+        clearPendingOrder();
+        btn.disabled=false; btn.textContent=REPORT_SUBMIT_LABEL;
+        if(pe.message==='CHANNEL_NOT_SET' || pe.message==='PORTONE_SDK_MISSING'){
+          return fail(msg,'결제 설정이 아직 완료되지 않았습니다. 잠시 후 다시 시도해 주세요.');
+        }
+        return fail(msg,'결제가 취소되었거나 완료되지 않았습니다. 다시 시도해 주세요.');
+      }
+    }
+    await db.createReportOrder(row);
+    clearPendingOrder();
+    msg.className='form-msg ok';
+    msg.textContent = hasReport
+      ? '리포트 신청이 접수되었습니다. 업로드해 주신 결과지를 바탕으로 다음날 리포트를 보내드릴게요. 감사합니다.'
+      : (PAYMENT_ENABLED
+        ? '결제가 완료되어 리포트 신청이 접수되었습니다. 강점 진단 테스트 코드를 곧 보내드릴게요. 감사합니다.'
+        : '리포트 신청이 접수되었습니다. 강점 진단 테스트 코드를 곧 보내드릴게요. 감사합니다.');
+    $('#reportOrderForm').reset();
+    reportState.personas.clear();
+    reportState.customList = [];
+    $$('#personaPick .persona').forEach(p=> p.classList.remove('active'));
+    $('#customPersonaWrap').hidden = true;
+    $('#rReportUploadWrap').hidden = true;
+    renderCustomPersonaList();
+    updateReportPricePreview();
+  }catch(err){
+    if(err.message==='NOT_CONFIGURED'){
+      fail(msg,'신청 시스템이 아직 연결되지 않았습니다. (Supabase 키 입력 필요)');
+    } else if(hasReport && !row.report_path){
+      fail(msg,'결과지 업로드에 실패했습니다. (Storage \'reports\' 버킷 설정을 확인해 주세요)');
+      console.error(err);
+    } else {
+      fail(msg,'접수 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.');
+      console.error(err);
+    }
+  }finally{ btn.disabled=false; btn.textContent=REPORT_SUBMIT_LABEL; }
+}
+
+/* =========================================================
+   관계 리포트(두 사람) 신청 폼
+   ========================================================= */
+const pairState = { rel:null, org:null };
+
+function pairResolvedRelKey(){
+  return pairState.rel === 'org' ? (pairState.org ? `org_${pairState.org}` : null) : pairState.rel;
+}
+
+function initPairReportOrder(){
+  $$('#relPick .rel').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      pairState.rel = btn.dataset.rel;
+      pairState.org = null;
+      $$('#relPick .rel').forEach(b=> b.classList.toggle('active', b===btn));
+      $('#orgSubPick').hidden = (pairState.rel !== 'org');
+      $$('#orgSubPick .org').forEach(b=> b.classList.remove('active'));
+      updatePairPersonLabels();
+    });
+  });
+  $$('#orgSubPick .org').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      pairState.org = btn.dataset.org;
+      $$('#orgSubPick .org').forEach(b=> b.classList.toggle('active', b===btn));
+      updatePairPersonLabels();
+    });
+  });
+
+  $('#p1HasReport').addEventListener('change', e=>{
+    $('#p1ReportUploadWrap').hidden = !e.target.checked;
+    if(!e.target.checked) $('#p1ReportFile').value='';
+    updatePairPricePreview();
+  });
+  $('#p2HasReport').addEventListener('change', e=>{
+    $('#p2ReportUploadWrap').hidden = !e.target.checked;
+    if(!e.target.checked) $('#p2ReportFile').value='';
+    updatePairPricePreview();
+  });
+
+  updatePairPersonLabels();
+  updatePairPricePreview();
+  $('#pairOrderForm').addEventListener('submit', submitPairReportOrder);
+  const sb=$('#pairSubmitBtn'); if(sb) sb.textContent = PAIR_SUBMIT_LABEL;
+}
+
+/* 선택한 관계에 맞춰 "사람 1"/"사람 2" 헤더를 실제 역할 이름으로 바꿔 보여준다. */
+function updatePairPersonLabels(){
+  const key = pairResolvedRelKey();
+  const rel = key && RELATIONSHIPS[key];
+  const [a, b] = (rel && rel.roles) || SYMMETRIC_PERSON_LABELS[key] || ['사람 1','사람 2'];
+  $('#p1Title').textContent = a;
+  $('#p2Title').textContent = b;
+}
+
+function updatePairPricePreview(){
+  const p1 = $('#p1HasReport').checked, p2 = $('#p2HasReport').checked;
+  const total = pairReportPrice(p1, p2);
+  const box = $('#pairPricePreview');
+  box.innerHTML = `<s>${won(PAIR_REPORT_PRICE_ORIG)}</s> <strong>${won(total)}</strong>`
+    + (p1 || p2 ? ` <em>· 결과지 보유 할인 적용</em>` : '');
+}
+
+async function submitPairReportOrder(ev){
+  ev.preventDefault();
+  const msg = $('#pairFormMsg'); msg.className='form-msg'; msg.textContent='';
+
+  const relKey = pairResolvedRelKey();
+  if(!relKey){ return fail(msg, pairState.rel==='org' ? '조직 내 관계를 선택해 주세요.' : '두 분의 관계를 선택해 주세요.'); }
+  const rel = RELATIONSHIPS[relKey];
+
+  let relationshipLabel = rel.label;
+  let p1Role = null, p2Role = null;
+  if(rel.roles){
+    [p1Role, p2Role] = rel.roles;
+    relationshipLabel = `${rel.label} (사람1=${p1Role} · 사람2=${p2Role})`;
+  }
+
+  const p1Name=$('#p1Name').value.trim(), p1Phone=$('#p1Phone').value.trim(), p1Email=$('#p1Email').value.trim();
+  const p2Name=$('#p2Name').value.trim(), p2Phone=$('#p2Phone').value.trim(), p2Email=$('#p2Email').value.trim();
+  if(!p1Name||!p1Phone||!p1Email||!p2Name||!p2Phone||!p2Email){
+    return fail(msg,'두 분의 이름·연락처·이메일을 모두 입력해 주세요.');
+  }
+
+  const p1Want = $('#p1HasReport').checked, p1File = $('#p1ReportFile').files[0]||null;
+  const p2Want = $('#p2HasReport').checked, p2File = $('#p2ReportFile').files[0]||null;
+  if(p1Want && !p1File){ return fail(msg,'사람 1의 강점 진단 결과지를 업로드해 주세요.'); }
+  if(p2Want && !p2File){ return fail(msg,'사람 2의 강점 진단 결과지를 업로드해 주세요.'); }
+  const p1HasReport = !!(p1Want && p1File);
+  const p2HasReport = !!(p2Want && p2File);
+
+  const total = pairReportPrice(p1HasReport, p2HasReport);
+
+  const row = {
+    relationship_key: relKey,
+    relationship_label: relationshipLabel,
+    person1_name: p1Name, person1_phone: p1Phone, person1_email: p1Email,
+    person1_role: p1Role, person1_has_report: p1HasReport,
+    person2_name: p2Name, person2_phone: p2Phone, person2_email: p2Email,
+    person2_role: p2Role, person2_has_report: p2HasReport,
+    base_price: total,
+    total_price: total,
+    status: 'pending'
+  };
+
+  const btn=$('#pairSubmitBtn'); btn.disabled=true; btn.textContent='접수 중…';
+  try{
+    // 결과지 업로드를 결제보다 먼저 — 모바일 리다이렉트 복귀 시 File 객체가 유실되기 때문
+    if(p1HasReport){ btn.textContent='사람 1 결과지 업로드 중…'; row.person1_report_path = await db.uploadReport(p1File); }
+    if(p2HasReport){ btn.textContent='사람 2 결과지 업로드 중…'; row.person2_report_path = await db.uploadReport(p2File); }
+
+    if(PAYMENT_ENABLED){
+      btn.textContent='결제 진행 중…';
+      stashPendingOrder('pair', row);   // 모바일 리다이렉트 복귀용
+      try{
+        const pay = await requestPortonePayment({
+          amount: total, orderName: '미라휴브 관계 리포트',
+          customer: { name:p1Name, phone:p1Phone, email:p1Email }
+        });
+        row.payment_id = pay.paymentId;
+        row.pay_method = 'card';
+        row.payment_status = 'paid'; // ⚠ 서버 검증 전 상태. 추후 Edge Function 검증 연동 필요.
+      }catch(pe){
+        clearPendingOrder();
+        btn.disabled=false; btn.textContent=PAIR_SUBMIT_LABEL;
+        if(pe.message==='CHANNEL_NOT_SET' || pe.message==='PORTONE_SDK_MISSING'){
+          return fail(msg,'결제 설정이 아직 완료되지 않았습니다. 잠시 후 다시 시도해 주세요.');
+        }
+        return fail(msg,'결제가 취소되었거나 완료되지 않았습니다. 다시 시도해 주세요.');
+      }
+    }
+    await db.createPairReportOrder(row);
+    clearPendingOrder();
+    msg.className='form-msg ok';
+    msg.textContent = PAYMENT_ENABLED
+      ? '결제가 완료되어 관계 리포트 신청이 접수되었습니다. 필요한 분께는 강점 진단 테스트 코드를 곧 보내드릴게요. 감사합니다.'
+      : '관계 리포트 신청이 접수되었습니다. 필요한 분께는 강점 진단 테스트 코드를 곧 보내드릴게요. 감사합니다.';
+    $('#pairOrderForm').reset();
+    pairState.rel=null; pairState.org=null;
+    $$('#relPick .rel,#orgSubPick .org').forEach(b=> b.classList.remove('active'));
+    $('#orgSubPick').hidden = true;
+    updatePairPersonLabels();
+    $('#p1ReportUploadWrap').hidden = true;
+    $('#p2ReportUploadWrap').hidden = true;
+    updatePairPricePreview();
+  }catch(err){
+    if(err.message==='NOT_CONFIGURED'){
+      fail(msg,'신청 시스템이 아직 연결되지 않았습니다. (Supabase 키 입력 필요)');
+    } else if((p1HasReport && !row.person1_report_path) || (p2HasReport && !row.person2_report_path)){
+      fail(msg,'결과지 업로드에 실패했습니다. (Storage \'reports\' 버킷 설정을 확인해 주세요)');
+      console.error(err);
+    } else {
+      fail(msg,'접수 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.');
+      console.error(err);
+    }
+  }finally{ btn.disabled=false; btn.textContent=PAIR_SUBMIT_LABEL; }
+}
+
+/* =========================================================
    어드민
    ========================================================= */
 let adminAuthed = false;
 let currentFilter = 'all';
+let currentReportFilter = 'all';
+let currentPairReportFilter = 'all';
 
 function initAdmin(){
   window.addEventListener('hashchange', handleHash);
@@ -453,12 +943,25 @@ function initAdmin(){
     $$('.atab').forEach(x=>x.classList.remove('active')); t.classList.add('active');
     const tab=t.dataset.tab;
     $('#panelBookings').hidden = tab!=='bookings';
+    $('#panelReports').hidden = tab!=='reports';
+    $('#panelPairReports').hidden = tab!=='pairReports';
     $('#panelBlocks').hidden = tab!=='blocks';
+    if(tab==='bookings') loadBookings();
     if(tab==='blocks') loadBlocks();
+    if(tab==='reports') loadReportOrders();
+    if(tab==='pairReports') loadPairReportOrders();
   }));
   $$('#statusFilter .fbtn').forEach(b=> b.addEventListener('click', ()=>{
     $$('#statusFilter .fbtn').forEach(x=>x.classList.remove('active')); b.classList.add('active');
     currentFilter=b.dataset.status; renderBookings();
+  }));
+  $$('#reportStatusFilter .fbtn').forEach(b=> b.addEventListener('click', ()=>{
+    $$('#reportStatusFilter .fbtn').forEach(x=>x.classList.remove('active')); b.classList.add('active');
+    currentReportFilter=b.dataset.status; renderReportOrders();
+  }));
+  $$('#pairReportStatusFilter .fbtn').forEach(b=> b.addEventListener('click', ()=>{
+    $$('#pairReportStatusFilter .fbtn').forEach(x=>x.classList.remove('active')); b.classList.add('active');
+    currentPairReportFilter=b.dataset.status; renderPairReportOrders();
   }));
   $('#calPrev').addEventListener('click', ()=> shiftMonth(-1));
   $('#calNext').addEventListener('click', ()=> shiftMonth(1));
@@ -629,6 +1132,260 @@ function priceRow(b){
 }
 
 function flash(btn,t){ const o=btn.textContent; btn.textContent=t; setTimeout(()=>btn.textContent=o,1200); }
+
+/* =========================================================
+   리포트 주문 (어드민)
+   ========================================================= */
+let allReportOrders = [];
+async function loadReportOrders(){
+  const list=$('#reportOrderList'); list.innerHTML='<p class="muted">불러오는 중…</p>';
+  if(!CONFIGURED){ list.innerHTML='<p class="muted">Supabase 키 입력 후 이용할 수 있습니다.</p>'; return; }
+  try{ allReportOrders = await db.listReportOrders(); renderReportOrders(); }
+  catch(e){ list.innerHTML='<p class="muted">불러오기 실패. 테이블/키 설정을 확인해 주세요.</p>'; console.error(e); }
+}
+
+function renderReportOrders(){
+  const list=$('#reportOrderList');
+  const rows = currentReportFilter==='all' ? allReportOrders : allReportOrders.filter(o=>o.status===currentReportFilter);
+  if(!rows.length){ list.innerHTML='<p class="muted">리포트 신청이 없습니다.</p>'; return; }
+  list.innerHTML='';
+  rows.forEach(o=> list.appendChild(reportOrderCard(o)));
+}
+
+function reportOrderCard(o){
+  const active = (o.status==='pending'||o.status==='confirmed');
+  const personas = (o.personas||[]).length ? (o.personas||[]).join(', ') : '없음';
+  const paidTag = o.payment_status==='paid'
+    ? ` · <span style="color:#1a7a4a;font-weight:600;">결제완료</span>` : '';
+  const prepHtml = o.has_report
+    ? `<div class="bk-prep ok">📎 결과지 업로드 완료 · 테스트코드 발송·테스트완료 단계 생략</div>`
+    : (active
+      ? (o.prep_done
+          ? `<div class="bk-prep ok">✓ 테스트 완료 확인됨</div>`
+          : `<div class="bk-prep wait">· 테스트 완료 대기 중</div>`)
+      : '');
+  const prepBtn = (active && !o.has_report)
+    ? `<button class="mini-btn ghost act-prep">${o.prep_done?'확인 취소':'테스트 완료 표시'}</button>` : '';
+  const reportBtn = o.report_path ? `<button class="mini-btn ghost act-report">결과지 보기</button>` : '';
+
+  const el=document.createElement('div');
+  el.className=`bk-card s-${o.status}`;
+  el.innerHTML = `
+    <div class="bk-top">
+      <div>
+        <div class="bk-name">${esc(o.customer_name)}</div>
+        <div class="bk-svc">강점 리포트 · 추가 옵션 ${o.persona_count||0}개</div>
+      </div>
+      <span class="bk-badge">${STATUS_LABEL[o.status]||o.status}</span>
+    </div>
+    <div class="bk-contact">${esc(o.customer_phone)} · ${esc(o.customer_email)}</div>
+    <div class="bk-price">💳 <strong>${won(o.total_price)}</strong>${paidTag}</div>
+    <div class="bk-purpose"><strong>추가 옵션</strong> — ${esc(personas)}</div>
+    ${prepHtml}
+    <div class="bk-actions">
+      <select class="st-sel">
+        ${['pending','confirmed','completed','cancelled'].map(s=>`<option value="${s}" ${s===o.status?'selected':''}>${STATUS_LABEL[s]}</option>`).join('')}
+      </select>
+      ${prepBtn}
+      <button class="mini-btn act-mail">Gmail 메일</button>
+      ${reportBtn}
+    </div>
+    <div class="bk-memo">
+      <textarea rows="2" placeholder="고객 메모…">${esc(o.memo||'')}</textarea>
+      <button class="mini-btn ghost act-memo" style="margin-top:6px;">메모 저장</button>
+    </div>`;
+
+  el.querySelector('.st-sel').addEventListener('change', async e=>{
+    const ns=e.target.value;
+    try{
+      await db.updateReportOrder(o.id,{status:ns}); o.status=ns;
+      el.className=`bk-card s-${o.status}`; el.querySelector('.bk-badge').textContent=STATUS_LABEL[o.status];
+      renderReportOrders();
+    }catch(err){ alert('상태 변경 실패'); console.error(err); }
+  });
+  const prepEl=el.querySelector('.act-prep');
+  if(prepEl) prepEl.addEventListener('click', async ()=>{
+    const nv=!o.prep_done;
+    try{ await db.updateReportOrder(o.id,{prep_done:nv}); o.prep_done=nv; renderReportOrders(); }
+    catch(err){ alert('상태 변경 실패'); console.error(err); }
+  });
+  el.querySelector('.act-memo').addEventListener('click', async ()=>{
+    const v=el.querySelector('textarea').value;
+    try{ await db.updateReportOrder(o.id,{memo:v}); o.memo=v; flash(el.querySelector('.act-memo'),'저장됨'); }
+    catch(err){ alert('메모 저장 실패'); console.error(err); }
+  });
+  el.querySelector('.act-mail').addEventListener('click', ()=>{
+    const w = window.open(buildReportMail(o), '_blank');
+    if(!w) alert('팝업이 차단되었습니다. 브라우저에서 이 사이트의 팝업을 허용하면 메일 작성창이 열립니다.');
+  });
+  const repBtn = el.querySelector('.act-report');
+  if(repBtn){
+    repBtn.addEventListener('click', async ()=>{
+      repBtn.disabled=true; const o2=repBtn.textContent; repBtn.textContent='여는 중…';
+      try{ const url = await db.reportSignedUrl(o.report_path); window.open(url,'_blank'); }
+      catch(e){ alert('결과지를 열 수 없습니다. Storage 설정을 확인해 주세요.'); console.error(e); }
+      finally{ repBtn.disabled=false; repBtn.textContent=o2; }
+    });
+  }
+  return el;
+}
+
+/* 리포트 신청 접수 메일(Gmail compose) */
+function buildReportMail(o){
+  const personas = (o.personas||[]).length ? (o.personas||[]).join(', ') : '없음';
+  const subject = `[MIRA HUVE] 강점 리포트 신청이 접수되었습니다`;
+  const guide = o.has_report
+    ? [ `보내주신 강점 진단(갤럽 CliftonStrengths 34개 전체) 결과지를 잘 받았습니다.`,
+        `별도의 테스트 코드 발송·진단 없이, 보내주신 결과를 바탕으로 다음날 리포트를 만들어 보내드립니다.` ]
+    : [ `리포트 생성을 위해 강점 진단(갤럽 CliftonStrengths) 테스트 코드를 곧 보내드립니다.`,
+        `코드를 받으시면 진단을 완료해 주세요. 완료된 결과를 바탕으로 리포트를 만들어 보내드립니다.` ];
+  const lines = [
+    `안녕하세요, ${o.customer_name} 님.`,
+    `강점 리포트 신청이 접수되었습니다. 아래 내용을 확인해 주세요.`,
+    ``,
+    `추가 옵션 · ${personas}`,
+    `결제 금액 · ${won(o.total_price)}`,
+    ``,
+    ...guide,
+    ``,
+    `세상은 바꿀 수 없지만, 당신의 세상은 바꿀 수 있습니다.`,
+    `MIRA HUVE`
+  ];
+  return 'https://mail.google.com/mail/?view=cm&fs=1'
+    + '&to=' + encodeURIComponent(o.customer_email)
+    + '&su=' + encodeURIComponent(subject)
+    + '&body=' + encodeURIComponent(lines.join('\n'));
+}
+
+/* =========================================================
+   관계 리포트 주문 (어드민)
+   ========================================================= */
+let allPairReportOrders = [];
+async function loadPairReportOrders(){
+  const list=$('#pairReportOrderList'); list.innerHTML='<p class="muted">불러오는 중…</p>';
+  if(!CONFIGURED){ list.innerHTML='<p class="muted">Supabase 키 입력 후 이용할 수 있습니다.</p>'; return; }
+  try{ allPairReportOrders = await db.listPairReportOrders(); renderPairReportOrders(); }
+  catch(e){ list.innerHTML='<p class="muted">불러오기 실패. 테이블/키 설정을 확인해 주세요.</p>'; console.error(e); }
+}
+
+function renderPairReportOrders(){
+  const list=$('#pairReportOrderList');
+  const rows = currentPairReportFilter==='all' ? allPairReportOrders : allPairReportOrders.filter(o=>o.status===currentPairReportFilter);
+  if(!rows.length){ list.innerHTML='<p class="muted">관계 리포트 신청이 없습니다.</p>'; return; }
+  list.innerHTML='';
+  rows.forEach(o=> list.appendChild(pairReportOrderCard(o)));
+}
+
+function personPrepLine(name, role, hasReport){
+  const roleTag = role ? ` (${esc(role)})` : '';
+  return hasReport
+    ? `<div class="bk-prep ok">📎 ${esc(name)}${roleTag} · 결과지 업로드 완료</div>`
+    : `<div class="bk-prep wait">· ${esc(name)}${roleTag} · 테스트 코드 발송 대상</div>`;
+}
+
+function pairReportOrderCard(o){
+  const paidTag = o.payment_status==='paid'
+    ? ` · <span style="color:#1a7a4a;font-weight:600;">결제완료</span>` : '';
+  const rep1Btn = o.person1_report_path ? `<button class="mini-btn ghost act-report1">사람1 결과지</button>` : '';
+  const rep2Btn = o.person2_report_path ? `<button class="mini-btn ghost act-report2">사람2 결과지</button>` : '';
+
+  const el=document.createElement('div');
+  el.className=`bk-card s-${o.status}`;
+  el.innerHTML = `
+    <div class="bk-top">
+      <div>
+        <div class="bk-name">${esc(o.person1_name)} · ${esc(o.person2_name)}</div>
+        <div class="bk-svc">관계 리포트 · ${esc(o.relationship_label)}</div>
+      </div>
+      <span class="bk-badge">${STATUS_LABEL[o.status]||o.status}</span>
+    </div>
+    <div class="bk-contact">사람1 · ${esc(o.person1_phone)} · ${esc(o.person1_email)}</div>
+    <div class="bk-contact">사람2 · ${esc(o.person2_phone)} · ${esc(o.person2_email)}</div>
+    <div class="bk-price">💳 <strong>${won(o.total_price)}</strong>${paidTag}</div>
+    ${personPrepLine(o.person1_name, o.person1_role, o.person1_has_report)}
+    ${personPrepLine(o.person2_name, o.person2_role, o.person2_has_report)}
+    <div class="bk-actions">
+      <select class="st-sel">
+        ${['pending','confirmed','completed','cancelled'].map(s=>`<option value="${s}" ${s===o.status?'selected':''}>${STATUS_LABEL[s]}</option>`).join('')}
+      </select>
+      <button class="mini-btn act-mail1">사람1 메일</button>
+      <button class="mini-btn act-mail2">사람2 메일</button>
+      ${rep1Btn}
+      ${rep2Btn}
+    </div>
+    <div class="bk-memo">
+      <textarea rows="2" placeholder="고객 메모…">${esc(o.memo||'')}</textarea>
+      <button class="mini-btn ghost act-memo" style="margin-top:6px;">메모 저장</button>
+    </div>`;
+
+  el.querySelector('.st-sel').addEventListener('change', async e=>{
+    const ns=e.target.value;
+    try{
+      await db.updatePairReportOrder(o.id,{status:ns}); o.status=ns;
+      el.className=`bk-card s-${o.status}`; el.querySelector('.bk-badge').textContent=STATUS_LABEL[o.status];
+      renderPairReportOrders();
+    }catch(err){ alert('상태 변경 실패'); console.error(err); }
+  });
+  el.querySelector('.act-memo').addEventListener('click', async ()=>{
+    const v=el.querySelector('textarea').value;
+    try{ await db.updatePairReportOrder(o.id,{memo:v}); o.memo=v; flash(el.querySelector('.act-memo'),'저장됨'); }
+    catch(err){ alert('메모 저장 실패'); console.error(err); }
+  });
+  el.querySelector('.act-mail1').addEventListener('click', ()=>{
+    const w = window.open(buildPairReportMail(o,1), '_blank');
+    if(!w) alert('팝업이 차단되었습니다. 브라우저에서 이 사이트의 팝업을 허용하면 메일 작성창이 열립니다.');
+  });
+  el.querySelector('.act-mail2').addEventListener('click', ()=>{
+    const w = window.open(buildPairReportMail(o,2), '_blank');
+    if(!w) alert('팝업이 차단되었습니다. 브라우저에서 이 사이트의 팝업을 허용하면 메일 작성창이 열립니다.');
+  });
+  const rep1El = el.querySelector('.act-report1');
+  if(rep1El) rep1El.addEventListener('click', async ()=>{
+    rep1El.disabled=true; const t=rep1El.textContent; rep1El.textContent='여는 중…';
+    try{ const url = await db.reportSignedUrl(o.person1_report_path); window.open(url,'_blank'); }
+    catch(e){ alert('결과지를 열 수 없습니다. Storage 설정을 확인해 주세요.'); console.error(e); }
+    finally{ rep1El.disabled=false; rep1El.textContent=t; }
+  });
+  const rep2El = el.querySelector('.act-report2');
+  if(rep2El) rep2El.addEventListener('click', async ()=>{
+    rep2El.disabled=true; const t=rep2El.textContent; rep2El.textContent='여는 중…';
+    try{ const url = await db.reportSignedUrl(o.person2_report_path); window.open(url,'_blank'); }
+    catch(e){ alert('결과지를 열 수 없습니다. Storage 설정을 확인해 주세요.'); console.error(e); }
+    finally{ rep2El.disabled=false; rep2El.textContent=t; }
+  });
+  return el;
+}
+
+/* 관계 리포트 접수 메일(Gmail compose) — 두 사람에게 각각 보낸다 */
+function buildPairReportMail(o, personNum){
+  const isP1 = personNum===1;
+  const name = isP1 ? o.person1_name : o.person2_name;
+  const email = isP1 ? o.person1_email : o.person2_email;
+  const role = isP1 ? o.person1_role : o.person2_role;
+  const hasReport = isP1 ? o.person1_has_report : o.person2_has_report;
+  const otherName = isP1 ? o.person2_name : o.person1_name;
+  const subject = `[MIRA HUVE] 관계 리포트 신청이 접수되었습니다`;
+  const guide = hasReport
+    ? [ `보내주신 강점 진단(갤럽 CliftonStrengths 34개 전체) 결과지를 잘 받았습니다.` ]
+    : [ `리포트 생성을 위해 강점 진단(갤럽 CliftonStrengths) 테스트 코드를 곧 보내드립니다.`,
+        `코드를 받으시면 진단을 완료해 주세요.` ];
+  const lines = [
+    `안녕하세요, ${name} 님.`,
+    `${otherName} 님과 함께 신청하신 관계 리포트가 접수되었습니다.`,
+    ``,
+    `관계 · ${o.relationship_label}${role ? ' · 역할: '+role : ''}`,
+    ``,
+    ...guide,
+    `두 분의 결과가 모두 준비되면, 강점이 서로 어떻게 부딪히고 보완되는지 담은 리포트를 만들어 보내드립니다.`,
+    ``,
+    `세상은 바꿀 수 없지만, 당신의 세상은 바꿀 수 있습니다.`,
+    `MIRA HUVE`
+  ];
+  return 'https://mail.google.com/mail/?view=cm&fs=1'
+    + '&to=' + encodeURIComponent(email)
+    + '&su=' + encodeURIComponent(subject)
+    + '&body=' + encodeURIComponent(lines.join('\n'));
+}
 
 /* 고객 이력 */
 async function showHistory(email,name){
@@ -809,10 +1566,16 @@ function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g, c=>({'&':'&amp;'
 
 /* ---- 시작 ---- */
 document.addEventListener('DOMContentLoaded', ()=>{
-  initNav();
-  initBooking();
-  initAdmin();
+  // app.js는 index.html·report-apply.html·pair-report-apply.html이 공유한다 — 각 페이지에 실제로 있는 요소만 초기화한다
+  if($('#navToggle') || $('#navLinks')) initNav();
+  if($('.domain-card')) initDomainFlip();
+  if($('#bookingForm')) initBooking();
+  if($('#reportOrderForm')) initReportOrder();
+  if($('#pairOrderForm')) initPairReportOrder();
+  if($('#adminScreen')) initAdmin();
   // 이메일 mailto 조합 (평문 노출/난독화 방지)
   const em = document.getElementById('emailLink');
   if(em){ em.href = 'mailto:' + em.dataset.user + '@' + em.dataset.domain; }
+  // 모바일 결제 리다이렉트 복귀 처리 — 주소창의 paymentId/code를 읽어 접수를 마저 완료
+  handlePaymentRedirect();
 });
