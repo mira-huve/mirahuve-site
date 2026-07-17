@@ -858,11 +858,10 @@ async function submitPairReportOrder(ev){
   if(!relKey){ return fail(msg, pairState.rel==='org' ? '조직 내 관계를 선택해 주세요.' : '두 분의 관계를 선택해 주세요.'); }
   const rel = RELATIONSHIPS[relKey];
 
-  let relationshipLabel = rel.label;
+  const relationshipLabel = rel.label;   // 역할은 person1_role/person2_role에 별도 저장되므로 라벨엔 붙이지 않는다
   let p1Role = null, p2Role = null;
   if(rel.roles){
     [p1Role, p2Role] = rel.roles;
-    relationshipLabel = `${rel.label} (사람1=${p1Role} · 사람2=${p2Role})`;
   }
 
   const p1Name=$('#p1Name').value.trim(), p1Phone=$('#p1Phone').value.trim(), p1Email=$('#p1Email').value.trim();
@@ -1342,6 +1341,11 @@ function renderPairReportOrders(){
   rows.forEach(o=> list.appendChild(pairReportOrderCard(o)));
 }
 
+/* 관계 라벨에서 과거에 저장된 "(사람1=… · 사람2=…)" 접미사를 떼어낸다(구 데이터 호환) */
+function cleanRelLabel(label){ return String(label||'').replace(/\s*\(사람1=.*$/, ''); }
+/* 연락처 앞에 붙일 "역할 이름"(역할 없으면 이름만) */
+function personTag(role, name){ return (role ? role + ' ' : '') + (name || ''); }
+
 function personPrepLine(name, role, hasReport){
   const roleTag = role ? ` (${esc(role)})` : '';
   return hasReport
@@ -1361,12 +1365,12 @@ function pairReportOrderCard(o){
     <div class="bk-top">
       <div>
         <div class="bk-name">${esc(o.person1_name)} · ${esc(o.person2_name)}</div>
-        <div class="bk-svc">관계 리포트 · ${esc(o.relationship_label)}</div>
+        <div class="bk-svc">관계 리포트 · ${esc(cleanRelLabel(o.relationship_label))}</div>
       </div>
       <span class="bk-badge">${STATUS_LABEL[o.status]||o.status}</span>
     </div>
-    <div class="bk-contact">사람1 · ${esc(o.person1_phone)} · ${esc(o.person1_email)}</div>
-    <div class="bk-contact">사람2 · ${esc(o.person2_phone)} · ${esc(o.person2_email)}</div>
+    <div class="bk-contact">${esc(personTag(o.person1_role, o.person1_name))} · ${esc(o.person1_phone)} · ${esc(o.person1_email)}</div>
+    <div class="bk-contact">${esc(personTag(o.person2_role, o.person2_name))} · ${esc(o.person2_phone)} · ${esc(o.person2_email)}</div>
     <div class="bk-price">💳 <strong>${won(o.total_price)}</strong>${paidTag}</div>
     ${personPrepLine(o.person1_name, o.person1_role, o.person1_has_report)}
     ${personPrepLine(o.person2_name, o.person2_role, o.person2_has_report)}
@@ -1447,7 +1451,7 @@ function buildPairReportMail(o, personNum, type='received'){
       `안녕하세요, ${name} 님.`,
       `${otherName} 님과 함께 신청하신 관계 리포트가 완성되어 보내드립니다. 첨부된 파일을 확인해 주세요.`,
       ``,
-      `관계 · ${o.relationship_label}${role ? ' · 역할: '+role : ''}`,
+      `관계 · ${cleanRelLabel(o.relationship_label)}${role ? ' · 역할: '+role : ''}`,
       ``,
       `두 분의 강점이 서로 어떻게 부딪히고 보완되는지 담았습니다. 읽다가 궁금한 점이 있으면 이 메일로 편하게 회신해 주세요.`,
       ``,
@@ -1477,7 +1481,7 @@ function buildPairReportMail(o, personNum, type='received'){
     `안녕하세요, ${name} 님.`,
     secondLine,
     ``,
-    `관계 · ${o.relationship_label}${role ? ' · 역할: '+role : ''}`,
+    `관계 · ${cleanRelLabel(o.relationship_label)}${role ? ' · 역할: '+role : ''}`,
     ``,
     ...guide,
     `두 분의 결과가 모두 준비되면, 강점이 서로 어떻게 부딪히고 보완되는지 담은 리포트를 만들어 보내드립니다.`,
