@@ -1105,7 +1105,7 @@ function bookingCard(b){
         ${['pending','confirmed','completed','cancelled'].map(s=>`<option value="${s}" ${s===b.status?'selected':''}>${STATUS_LABEL[s]}</option>`).join('')}
       </select>
       ${prepBtn}
-      <button class="mini-btn act-mail">Gmail 메일</button>
+      <button class="mini-btn act-mail">접수/확정 메일</button>
       <button class="mini-btn ghost act-hist">고객 이력</button>
       ${b.report_path?'<button class="mini-btn ghost act-report">결과지 보기</button>':''}
     </div>
@@ -1298,8 +1298,13 @@ function buildReportMail(o, type='received'){
   const guide = o.has_report
     ? [ `보내주신 강점 진단(갤럽 CliftonStrengths 34개 전체) 결과지를 잘 받았습니다.`,
         `별도의 테스트 코드 발송·진단 없이, 보내주신 결과를 바탕으로 다음날 리포트를 만들어 보내드립니다.` ]
-    : [ `리포트 생성을 위해 강점 진단(갤럽 CliftonStrengths) 테스트 코드를 곧 보내드립니다.`,
-        `코드를 받으시면 진단을 완료해 주세요. 완료된 결과를 바탕으로 리포트를 만들어 보내드립니다.` ];
+    : [ `리포트 생성을 위해 갤럽에서 강점 진단(CliftonStrengths) 테스트 코드를 발급해 드렸습니다.`,
+        `아래 갤럽 강점 사이트에 접속하신 뒤, 발급받으신 코드를 입력해 진단을 진행해 주세요.`,
+        ``,
+        `갤럽 강점 사이트 · https://my.gallup.com`,
+        `액세스 코드 · {발급받은 코드 입력}`,
+        ``,
+        `진단을 완료하시면, 그 결과를 바탕으로 리포트를 만들어 보내드립니다.` ];
   const lines = [
     `안녕하세요, ${o.customer_name} 님.`,
     intro,
@@ -1462,8 +1467,12 @@ function buildPairReportMail(o, personNum, type='received'){
     : `${otherName} 님과 함께 신청하신 관계 리포트가 접수되었습니다.`;
   const guide = hasReport
     ? [ `보내주신 강점 진단(갤럽 CliftonStrengths 34개 전체) 결과지를 잘 받았습니다.` ]
-    : [ `리포트 생성을 위해 강점 진단(갤럽 CliftonStrengths) 테스트 코드를 곧 보내드립니다.`,
-        `코드를 받으시면 진단을 완료해 주세요.` ];
+    : [ `리포트 생성을 위해 갤럽에서 강점 진단(CliftonStrengths) 테스트 코드를 발급해 드렸습니다.`,
+        `아래 갤럽 강점 사이트에 접속하신 뒤, 발급받으신 코드를 입력해 진단을 진행해 주세요.`,
+        ``,
+        `갤럽 강점 사이트 · https://my.gallup.com`,
+        `액세스 코드 · {발급받은 코드 입력}`,
+        `` ];
   const lines = [
     `안녕하세요, ${name} 님.`,
     secondLine,
@@ -1625,9 +1634,19 @@ function buildMail(b, type='received'){
   } else {
     guide = confirmed
       ? [ `상담 전까지 강점 진단(갤럽 CliftonStrengths)을 완료해 주세요.`,
-          `테스트는 30~40분 방해받지 않는 시간이 필요합니다.` ]
-      : [ `상담 진행을 위해 강점 진단(갤럽 CliftonStrengths) 테스트 코드를 곧 보내드립니다.`,
-          `코드를 받으시면 진단을 완료해 주세요. 결과 리포트를 바탕으로 상담을 준비합니다.` ];
+          `갤럽에서 발급한 테스트 코드를 아래 사이트에 입력해 진단을 진행하시면 됩니다.`,
+          ``,
+          `갤럽 강점 사이트 · https://my.gallup.com`,
+          `액세스 코드 · {발급받은 코드 입력}`,
+          ``,
+          `테스트는 30~40분 방해받지 않는 시간이 필요합니다. 결과 리포트를 바탕으로 상담을 준비합니다.` ]
+      : [ `상담 진행을 위해 갤럽에서 강점 진단(CliftonStrengths) 테스트 코드를 발급해 드렸습니다.`,
+          `아래 갤럽 강점 사이트에 접속하신 뒤, 발급받으신 코드를 입력해 진단을 진행해 주세요.`,
+          ``,
+          `갤럽 강점 사이트 · https://my.gallup.com`,
+          `액세스 코드 · {발급받은 코드 입력}`,
+          ``,
+          `테스트는 30~40분 방해받지 않는 시간이 필요합니다. 결과 리포트를 바탕으로 상담을 준비합니다.` ];
   }
   const costLine = (b.discount_rate > 0)
     ? `비용 · ${won(b.final_price)} (정가 ${won(b.base_price)}에서 40% 할인 적용)`
