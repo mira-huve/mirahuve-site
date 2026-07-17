@@ -51,9 +51,9 @@
 <section class="section booking reveal visible" id="bookingApply">
   <div class="section-eyebrow">BOOKING · 예약</div>
   <h2 class="section-title"><span class="accent">나를 이해하는 시간</span>을 예약하세요.</h2>
-  <p class="prereq-banner small">예약하시면 <strong>강점 진단 테스트 코드</strong>를 보내드립니다. 받으신 코드로 진단을 진행하시면 됩니다. 이미 결과지가 있으시면 아래에 체크해 주세요. <strong>상담비를 40% 할인</strong>해 드립니다.</p>
+  <p class="booking-note">예약하시면 <strong>강점 진단 테스트 코드</strong>를 보내드립니다. 받으신 코드로 진단을 진행하시면 됩니다.</p>
   <p class="booking-note">상담일 24시간 전까지 테스트가 완료되지 않으면 예약이 자동 취소됩니다. 테스트는 30~40분 방해받지 않는 시간이 필요합니다.</p>
-  <p class="booking-note">서비스 제공 시기 · 본 서비스는 비대면 또는 대면 상담 서비스로, 결제 완료 후 고객님이 선택하신 예약 일자·시간에 상담이 제공됩니다. 예약은 <strong>결제일로부터 2일 뒤 ~ 90일 이내</strong>에서 선택 가능합니다.</p>
+  <p class="booking-note">본 서비스는 비대면 또는 대면 상담 서비스로, 결제 완료 후 고객님이 선택하신 예약 일자·시간에 상담이 제공됩니다. 예약은 <strong>결제일로부터 2일 뒤 ~ 90일 이내</strong>에서 선택 가능합니다.</p>
 
   <!-- 예약 전용 절차 -->
   <div class="report-process">
@@ -83,8 +83,8 @@
   </div>
 
   <form id="bookingForm" class="booking-card report-order-card" autocomplete="off">
+    <h3 class="rp-title">상담서비스 선택</h3>
     <div class="field">
-      <label>1. 서비스 선택</label>
       <div class="service-pick" id="servicePick">
         <button type="button" class="pick" data-service="individual"><strong>개인 상담</strong><span>60분 · 대면·온라인</span></button>
         <button type="button" class="pick" data-service="couple"><strong>연인·부부 상담</strong><span>90분 · 대면·온라인</span></button>
@@ -93,14 +93,15 @@
       </div>
     </div>
 
+    <h3 class="rp-title">날짜 및 시간</h3>
     <div class="field">
-      <label for="bDate">2. 날짜 선택</label>
+      <label for="bDate">날짜</label>
       <input type="date" id="bDate" required>
       <small class="hint" id="dateHint">서비스를 먼저 선택해 주세요.</small>
     </div>
 
     <div class="field">
-      <label>3. 시간 선택</label>
+      <label>시간</label>
       <div class="slot-grid" id="slotGrid"><span class="slot-empty">날짜를 선택하면 가능한 시간이 표시됩니다.</span></div>
     </div>
 
