@@ -48,11 +48,19 @@ async function handlePaymentRedirect(){
     else if(pending.kind==='report'){ await db.createReportOrder(row); }
     else if(pending.kind==='pair'){ await db.createPairReportOrder(row); }
     clearPendingOrder();
+    const okText = pending.kind==='booking'
+      ? '결제가 완료되어 예약이 접수되었습니다. 확정 안내 메일을 곧 보내드릴게요. 감사합니다.'
+      : pending.kind==='report'
+        ? (row.has_report
+          ? '리포트 신청이 접수되었습니다. 업로드해 주신 결과지를 바탕으로 다음날 리포트를 보내드릴게요. 감사합니다.'
+          : '결제가 완료되어 리포트 신청이 접수되었습니다. 강점 진단 테스트 코드를 곧 보내드릴게요. 감사합니다.')
+        : '결제가 완료되어 관계 리포트 신청이 접수되었습니다. 필요한 분께는 강점 진단 테스트 코드를 곧 보내드릴게요. 감사합니다.';
     if(msg){
       msg.className='form-msg ok';
-      msg.textContent='결제가 완료되어 신청이 접수되었습니다. 안내 메일을 곧 보내드릴게요. 감사합니다.';
+      msg.textContent = okText;
       msg.scrollIntoView({ block:'center' });
     }
+    showNotice(okText);
   }catch(err){
     console.error(err);
     if(msg){
@@ -559,6 +567,7 @@ async function submitBooking(ev){
       : (rate > 0
         ? `예약이 접수되었습니다. 결과지 확인 후 40% 할인된 ${won(final)}으로 안내드릴게요. 감사합니다.`
         : '예약이 접수되었습니다. 확정 안내 메일을 곧 보내드릴게요. 감사합니다.');
+    showNotice(msg.textContent);
     $('#bookingForm').reset();
     $('#reportUploadWrap').hidden = true;
     $('#pricePreview').hidden = true;
@@ -578,6 +587,23 @@ async function submitBooking(ev){
   }finally{ btn.disabled=false; btn.textContent=SUBMIT_LABEL; }
 }
 function fail(el,t){ el.className='form-msg err'; el.textContent=t; }
+
+/* 접수 완료 안내 팝업 — [확인]을 누르면 닫힌다. 세 신청 폼이 공유한다. */
+function showNotice(text){
+  let m = $('#noticeModal');
+  if(!m){
+    m = document.createElement('div');
+    m.className = 'modal';
+    m.id = 'noticeModal';
+    m.innerHTML = `<div class="modal-box notice-box"><p id="noticeText"></p><button type="button" class="btn-primary" id="noticeOk">확인</button></div>`;
+    document.body.appendChild(m);
+    m.querySelector('#noticeOk').addEventListener('click', ()=>{ m.hidden = true; });
+    m.addEventListener('click', e=>{ if(e.target === m) m.hidden = true; });
+  }
+  m.querySelector('#noticeText').textContent = text;
+  m.hidden = false;
+  m.querySelector('#noticeOk').focus();
+}
 
 /* =========================================================
    강점 리포트 신청 폼
@@ -739,6 +765,7 @@ async function submitReportOrder(ev){
       : (PAYMENT_ENABLED
         ? '결제가 완료되어 리포트 신청이 접수되었습니다. 강점 진단 테스트 코드를 곧 보내드릴게요. 감사합니다.'
         : '리포트 신청이 접수되었습니다. 강점 진단 테스트 코드를 곧 보내드릴게요. 감사합니다.');
+    showNotice(msg.textContent);
     $('#reportOrderForm').reset();
     reportState.personas.clear();
     reportState.customList = [];
@@ -896,6 +923,7 @@ async function submitPairReportOrder(ev){
     msg.textContent = PAYMENT_ENABLED
       ? '결제가 완료되어 관계 리포트 신청이 접수되었습니다. 필요한 분께는 강점 진단 테스트 코드를 곧 보내드릴게요. 감사합니다.'
       : '관계 리포트 신청이 접수되었습니다. 필요한 분께는 강점 진단 테스트 코드를 곧 보내드릴게요. 감사합니다.';
+    showNotice(msg.textContent);
     $('#pairOrderForm').reset();
     pairState.rel=null; pairState.org=null;
     $$('#relPick .rel,#orgSubPick .org').forEach(b=> b.classList.remove('active'));
