@@ -1345,6 +1345,27 @@ function renderPairReportOrders(){
 function cleanRelLabel(label){ return String(label||'').replace(/\s*\(사람1=.*$/, ''); }
 /* 연락처 앞에 붙일 "역할 이름"(역할 없으면 이름만) */
 function personTag(role, name){ return (role ? role + ' ' : '') + (name || ''); }
+/* 종성(받침) 유무 — 조사 '와/과' 선택용 */
+function hasBatchim(w){
+  if(!w) return false;
+  const s = String(w); const code = s.charCodeAt(s.length-1);
+  if(code < 0xAC00 || code > 0xD7A3) return false;
+  return (code - 0xAC00) % 28 !== 0;
+}
+function joinWaGwa(a, b){ return `${a}${hasBatchim(a) ? '과' : '와'} ${b}`; }
+/* 관계 표기 — 역할이 둘 다 있으면 '대표와 직원', 대칭 관계는 라벨 그대로('동료 · 동료'→'동료와 동료') */
+function relText(o){
+  if(o.person1_role && o.person2_role) return joinWaGwa(o.person1_role, o.person2_role);
+  const label = cleanRelLabel(o.relationship_label);
+  const parts = label.split(' · ');
+  return parts.length === 2 ? joinWaGwa(parts[0], parts[1]) : label;
+}
+/* 메일 본문의 '관계 : …' / '역할 : …' 두 줄 */
+function relRoleLines(o, role){
+  const arr = [`관계 : ${relText(o)}`];
+  if(role) arr.push(`역할 : ${role}`);
+  return arr;
+}
 
 function personPrepLine(name, role, hasReport){
   const roleTag = role ? ` (${esc(role)})` : '';
@@ -1451,7 +1472,7 @@ function buildPairReportMail(o, personNum, type='received'){
       `안녕하세요, ${name} 님.`,
       `${otherName} 님과 함께 신청하신 관계 리포트가 완성되어 보내드립니다. 첨부된 파일을 확인해 주세요.`,
       ``,
-      `관계 · ${cleanRelLabel(o.relationship_label)}${role ? ' · 역할: '+role : ''}`,
+      ...relRoleLines(o, role),
       ``,
       `두 분의 강점이 서로 어떻게 부딪히고 보완되는지 담았습니다. 읽다가 궁금한 점이 있으면 이 메일로 편하게 회신해 주세요.`,
       ``,
@@ -1481,7 +1502,7 @@ function buildPairReportMail(o, personNum, type='received'){
     `안녕하세요, ${name} 님.`,
     secondLine,
     ``,
-    `관계 · ${cleanRelLabel(o.relationship_label)}${role ? ' · 역할: '+role : ''}`,
+    ...relRoleLines(o, role),
     ``,
     ...guide,
     `두 분의 결과가 모두 준비되면, 강점이 서로 어떻게 부딪히고 보완되는지 담은 리포트를 만들어 보내드립니다.`,
