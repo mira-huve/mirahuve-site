@@ -588,7 +588,7 @@ async function submitBooking(ev){
 }
 function fail(el,t){ el.className='form-msg err'; el.textContent=t; }
 
-/* 접수 완료 안내 팝업 — [확인]을 누르면 닫힌다. 세 신청 폼이 공유한다. */
+/* 접수 완료 안내 팝업 — [확인]을 누르면 닫히고 메인페이지로 이동한다. 세 신청 폼이 공유한다. */
 function showNotice(text){
   let m = $('#noticeModal');
   if(!m){
@@ -597,8 +597,9 @@ function showNotice(text){
     m.id = 'noticeModal';
     m.innerHTML = `<div class="modal-box notice-box"><p id="noticeText"></p><button type="button" class="btn-primary" id="noticeOk">확인</button></div>`;
     document.body.appendChild(m);
-    m.querySelector('#noticeOk').addEventListener('click', ()=>{ m.hidden = true; });
-    m.addEventListener('click', e=>{ if(e.target === m) m.hidden = true; });
+    const done = ()=>{ m.hidden = true; location.href = 'index.html'; };
+    m.querySelector('#noticeOk').addEventListener('click', done);
+    m.addEventListener('click', e=>{ if(e.target === m) done(); });
   }
   m.querySelector('#noticeText').textContent = text;
   m.hidden = false;
