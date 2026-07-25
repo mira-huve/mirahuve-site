@@ -31,10 +31,12 @@ alter table public.bookings add column if not exists discount_rate int;
 drop policy if exists "anon insert bookings"          on public.bookings;
 drop policy if exists "admin full access bookings"    on public.bookings;
 
+-- 결제 위조 방지: anon은 payment_status='paid' 행을 직접 만들 수 없다.
+-- '결제완료' 접수는 verify-payment Edge Function(service role)만 저장한다.
 create policy "anon insert bookings"
   on public.bookings for insert
   to anon
-  with check (true);
+  with check (payment_status is distinct from 'paid');
 
 create policy "admin full access bookings"
   on public.bookings for all
@@ -137,7 +139,7 @@ drop policy if exists "admin full access report_orders"  on public.report_orders
 create policy "anon insert report_orders"
   on public.report_orders for insert
   to anon
-  with check (true);
+  with check (payment_status is distinct from 'paid');
 
 create policy "admin full access report_orders"
   on public.report_orders for all
@@ -184,7 +186,7 @@ drop policy if exists "admin full access pair_report_orders" on public.pair_repo
 create policy "anon insert pair_report_orders"
   on public.pair_report_orders for insert
   to anon
-  with check (true);
+  with check (payment_status is distinct from 'paid');
 
 create policy "admin full access pair_report_orders"
   on public.pair_report_orders for all

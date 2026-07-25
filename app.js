@@ -61,12 +61,9 @@ async function handlePaymentRedirect(){
   }
   const row = pending.row;
   row.payment_id = paymentId;
-  row.pay_method = row.pay_method || 'card';   // 결제 직전 stash에 담아 둔 선택 결제수단
-  row.payment_status = 'paid'; // ⚠ 서버 검증 전 상태. 추후 Edge Function 검증 연동 필요.
   try{
-    if(pending.kind==='booking'){ await db.createBooking(row); slotCache.delete(row.booking_date); }
-    else if(pending.kind==='report'){ await db.createReportOrder(row); }
-    else if(pending.kind==='pair'){ await db.createPairReportOrder(row); }
+    await verifyAndSave(pending.kind, row);   // 서버가 포트원 결제 확인 후 저장
+    if(pending.kind==='booking') slotCache.delete(row.booking_date);
     clearPendingOrder();
     const okText = pending.kind==='booking'
       ? '결제가 완료되어 예약이 접수되었습니다. 확정 안내 메일을 곧 보내드릴게요. 감사합니다.'
@@ -110,6 +107,17 @@ async function requestPortonePayment({ amount, orderName, customer }){
   const res = await window.PortOne.requestPayment(req);
   if(res && res.code != null) throw new Error(res.message || 'PAY_CANCELLED'); // 취소/실패
   return { paymentId: (res && res.paymentId) || paymentId };
+}
+
+/* 결제 완료 후 서버 검증·저장 — verify-payment Edge Function이
+   포트원에서 결제 사실·금액을 확인한 뒤에만 접수를 저장한다. */
+async function verifyAndSave(kind, row){
+  const { data, error } = await sbAnon.functions.invoke('verify-payment', { body: { kind, row } });
+  if(error || !data || !data.ok){
+    console.error('verify-payment', error || data);
+    throw new Error('VERIFY_FAILED' + (data && data.reason ? ':' + data.reason : ''));
+  }
+  return true;
 }
 
 /* ---- Supabase 연결 ----
@@ -576,8 +584,6 @@ async function submitBooking(ev){
           customer: { name: row.customer_name, phone: row.customer_phone, email: row.customer_email }
         });
         row.payment_id = pay.paymentId;
-        row.pay_method = selectedPayMethod;
-        row.payment_status = 'paid'; // ⚠ 서버 검증 전 상태. 추후 Edge Function 검증 연동 필요.
       }catch(pe){
         clearPendingOrder();
         btn.disabled=false; btn.textContent=SUBMIT_LABEL;
@@ -587,8 +593,13 @@ async function submitBooking(ev){
         return fail(msg,'결제가 취소되었거나 완료되지 않았습니다. 다시 시도해 주세요.');
       }
     }
-    // 3) 예약 저장
-    await db.createBooking(row);
+    // 3) 저장 — 결제한 경우 서버(Edge Function)가 포트원에서 결제를 검증한 뒤 저장한다
+    if(PAYMENT_ENABLED){
+      btn.textContent='결제 확인 중…';
+      await verifyAndSave('booking', row);
+    } else {
+      await db.createBooking(row);
+    }
     clearPendingOrder();
     slotCache.delete(row.booking_date);   // 방금 예약한 날짜 캐시 무효화 → 즉시 마감 반영
     msg.className='form-msg ok';
@@ -605,7 +616,10 @@ async function submitBooking(ev){
     $$('#servicePick .pick').forEach(p=>p.classList.remove('active'));
     $('#slotGrid').innerHTML='<span class="slot-empty">날짜를 선택하면 가능한 시간이 표시됩니다.</span>';
   }catch(err){
-    if(err.message==='NOT_CONFIGURED'){
+    if(err.message && err.message.indexOf('VERIFY')===0){
+      fail(msg,'결제는 완료되었지만 접수 저장 중 오류가 발생했습니다. 010-5205-5870 또는 mira@mirahuve.com으로 연락 주시면 바로 도와드리겠습니다.');
+      console.error(err);
+    } else if(err.message==='NOT_CONFIGURED'){
       fail(msg,'예약 시스템이 아직 연결되지 않았습니다. (Supabase 키 입력 필요)');
     } else if(wantReport && file && !row.report_path){
       fail(msg, uploadErrText(err));
@@ -789,8 +803,6 @@ async function submitReportOrder(ev){
           customer: { name, phone, email }
         });
         row.payment_id = pay.paymentId;
-        row.pay_method = selectedPayMethod;
-        row.payment_status = 'paid'; // ⚠ 서버 검증 전 상태. 추후 Edge Function 검증 연동 필요.
       }catch(pe){
         clearPendingOrder();
         btn.disabled=false; btn.textContent=REPORT_SUBMIT_LABEL;
@@ -800,7 +812,12 @@ async function submitReportOrder(ev){
         return fail(msg,'결제가 취소되었거나 완료되지 않았습니다. 다시 시도해 주세요.');
       }
     }
-    await db.createReportOrder(row);
+    if(PAYMENT_ENABLED){
+      btn.textContent='결제 확인 중…';
+      await verifyAndSave('report', row);
+    } else {
+      await db.createReportOrder(row);
+    }
     clearPendingOrder();
     msg.className='form-msg ok';
     msg.textContent = hasReport
@@ -818,7 +835,10 @@ async function submitReportOrder(ev){
     renderCustomPersonaList();
     updateReportPricePreview();
   }catch(err){
-    if(err.message==='NOT_CONFIGURED'){
+    if(err.message && err.message.indexOf('VERIFY')===0){
+      fail(msg,'결제는 완료되었지만 접수 저장 중 오류가 발생했습니다. 010-5205-5870 또는 mira@mirahuve.com으로 연락 주시면 바로 도와드리겠습니다.');
+      console.error(err);
+    } else if(err.message==='NOT_CONFIGURED'){
       fail(msg,'신청 시스템이 아직 연결되지 않았습니다. (Supabase 키 입력 필요)');
     } else if(hasReport && !row.report_path){
       fail(msg, uploadErrText(err));
@@ -949,8 +969,6 @@ async function submitPairReportOrder(ev){
           customer: { name:p1Name, phone:p1Phone, email:p1Email }
         });
         row.payment_id = pay.paymentId;
-        row.pay_method = selectedPayMethod;
-        row.payment_status = 'paid'; // ⚠ 서버 검증 전 상태. 추후 Edge Function 검증 연동 필요.
       }catch(pe){
         clearPendingOrder();
         btn.disabled=false; btn.textContent=PAIR_SUBMIT_LABEL;
@@ -960,7 +978,12 @@ async function submitPairReportOrder(ev){
         return fail(msg,'결제가 취소되었거나 완료되지 않았습니다. 다시 시도해 주세요.');
       }
     }
-    await db.createPairReportOrder(row);
+    if(PAYMENT_ENABLED){
+      btn.textContent='결제 확인 중…';
+      await verifyAndSave('pair', row);
+    } else {
+      await db.createPairReportOrder(row);
+    }
     clearPendingOrder();
     msg.className='form-msg ok';
     msg.textContent = PAYMENT_ENABLED
@@ -976,7 +999,10 @@ async function submitPairReportOrder(ev){
     $('#p2ReportUploadWrap').hidden = true;
     updatePairPricePreview();
   }catch(err){
-    if(err.message==='NOT_CONFIGURED'){
+    if(err.message && err.message.indexOf('VERIFY')===0){
+      fail(msg,'결제는 완료되었지만 접수 저장 중 오류가 발생했습니다. 010-5205-5870 또는 mira@mirahuve.com으로 연락 주시면 바로 도와드리겠습니다.');
+      console.error(err);
+    } else if(err.message==='NOT_CONFIGURED'){
       fail(msg,'신청 시스템이 아직 연결되지 않았습니다. (Supabase 키 입력 필요)');
     } else if((p1HasReport && !row.person1_report_path) || (p2HasReport && !row.person2_report_path)){
       fail(msg, uploadErrText(err));
