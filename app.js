@@ -7,11 +7,10 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 /* 어드민 인증은 Supabase Auth(이메일 로그인) + RLS로 처리합니다. 클라이언트 평문 비밀번호는 제거되었습니다. */
 
 /* ---- 결제 (PortOne V2) ----
-   KG이니시스 V2 테스트 채널 연동. 테스트 결제는 매일 23:00~23:50 자동취소됩니다.
-   실연동 전환 시 PORTONE_CHANNEL_KEY 를 실연동 채널 키로 교체하세요. */
+   KG이니시스 실운영 채널 연동 — 실제 결제·청구가 발생합니다. */
 const PAYMENT_ENABLED = true;
 const PORTONE_STORE_ID = 'store-bd5de6ee-17d5-4b4d-a7c5-18c8fc1d54db';
-const PORTONE_CHANNEL_KEY = 'channel-key-dea2b7a1-2f26-43fa-89cb-c80042eeb450'; // KG이니시스 테스트
+const PORTONE_CHANNEL_KEY = 'channel-key-a3c2dc4b-f952-4c2b-a7e0-2af060cff408'; // KG이니시스 실운영
 const SUBMIT_LABEL = PAYMENT_ENABLED ? '결제하고 예약 신청하기' : '예약 신청하기';
 
 function genPaymentId(){ return 'mh_' + Date.now() + '_' + Math.random().toString(36).slice(2,8); }
