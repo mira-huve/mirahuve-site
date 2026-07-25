@@ -6,7 +6,7 @@
 <title>상담 예약 · MIRA HUVE</title>
 <meta name="description" content="갤럽 CliftonStrengths 기반 강점 코칭 상담을 예약하세요. 개인·연인·부부·청소년·학부모 상담, 팀 워크숍.">
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=20260725c">
 <style>
 /* 신청 페이지 전용 미니 헤더 — 전체 nav 대신 로고 + 홈으로 링크만 두어 신청 흐름에 집중시킨다 */
 .mini-head{
@@ -152,6 +152,14 @@
 
     <div class="price-line" id="pricePreview" hidden></div>
 
+    <div class="field">
+      <label>결제수단</label>
+      <div class="paymethod-pick" id="payMethodPick">
+        <button type="button" class="pick active" data-paymethod="card"><strong>신용·체크카드</strong><span>일반 카드 결제</span></button>
+        <button type="button" class="pick" data-paymethod="kakaopay"><strong>카카오페이</strong><span>카카오 간편결제</span></button>
+      </div>
+    </div>
+
     <button type="submit" class="btn-primary full" id="submitBtn">예약 신청하기</button>
     <div class="form-msg" id="formMsg"></div>
   </form>
@@ -195,6 +203,6 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.portone.io/v2/browser-sdk.js"></script>
-<script src="app.js?v=20260725b"></script>
+<script src="app.js?v=20260725c"></script>
 </body>
 </html>

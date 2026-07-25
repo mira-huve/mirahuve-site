@@ -6,7 +6,7 @@
 <title>관계 리포트 신청 · MIRA HUVE</title>
 <meta name="description" content="두 사람의 갤럽 CliftonStrengths 강점 데이터를 함께 해석하는 MIRA HUVE 관계 리포트. 애인·부부·친구·가족·형제자매·조직까지 관계와 역할에 맞춰 신청하세요.">
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=20260725c">
 <style>
 /* 신청 페이지 전용 미니 헤더 — 전체 nav 대신 로고 + 홈으로 링크만 두어 신청 흐름에 집중시킨다 */
 .mini-head{
@@ -179,6 +179,14 @@
       · 디지털 콘텐츠 특성상 리포트 발송 후에는 단순 변심으로 인한 청약철회가 제한될 수 있으며, 리포트 하자 등 판매자 귀책 사유가 있는 경우에는 청약철회 및 환불이 가능합니다. 자세한 내용은 <a href="refund.html">환불·취소 정책</a>을 확인해 주세요.
     </div>
 
+    <div class="field">
+      <label>결제수단</label>
+      <div class="paymethod-pick" id="payMethodPick">
+        <button type="button" class="pick active" data-paymethod="card"><strong>신용·체크카드</strong><span>일반 카드 결제</span></button>
+        <button type="button" class="pick" data-paymethod="kakaopay"><strong>카카오페이</strong><span>카카오 간편결제</span></button>
+      </div>
+    </div>
+
     <button type="submit" class="btn-primary full" id="pairSubmitBtn">결제하고 신청하기</button>
     <div class="form-msg" id="pairFormMsg"></div>
   </form>
@@ -222,6 +230,6 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.portone.io/v2/browser-sdk.js"></script>
-<script src="app.js?v=20260725b"></script>
+<script src="app.js?v=20260725c"></script>
 </body>
 </html>

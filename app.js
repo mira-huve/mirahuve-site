@@ -15,6 +15,18 @@ const SUBMIT_LABEL = PAYMENT_ENABLED ? '결제하고 예약 신청하기' : '예
 
 function genPaymentId(){ return 'mh_' + Date.now() + '_' + Math.random().toString(36).slice(2,8); }
 
+/* ---- 결제수단 선택 (세 신청 폼 공통) ----
+   card: 이니시스 카드 결제창 · kakaopay: 카카오페이 간편결제 직접 호출 */
+let selectedPayMethod = 'card';
+function initPayMethodPick(){
+  $$('#payMethodPick .pick').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      selectedPayMethod = btn.dataset.paymethod;
+      $$('#payMethodPick .pick').forEach(b=> b.classList.toggle('active', b===btn));
+    });
+  });
+}
+
 /* ---- 결제 리다이렉트 복귀 처리 ----
    모바일에서는 결제창이 페이지 전체를 PG로 이동시켰다가 redirectUrl로 돌아온다.
    돌아오면 JS 상태가 초기화되므로, 결제 직전 주문 내용을 sessionStorage에 보관해 두고
@@ -40,7 +52,7 @@ async function handlePaymentRedirect(){
   }
   const row = pending.row;
   row.payment_id = paymentId;
-  row.pay_method = 'card';
+  row.pay_method = row.pay_method || 'card';   // 결제 직전 stash에 담아 둔 선택 결제수단
   row.payment_status = 'paid'; // ⚠ 서버 검증 전 상태. 추후 Edge Function 검증 연동 필요.
   try{
     if(pending.kind==='booking'){ await db.createBooking(row); slotCache.delete(row.booking_date); }
@@ -74,17 +86,20 @@ async function requestPortonePayment({ amount, orderName, customer }){
   if(!window.PortOne) throw new Error('PORTONE_SDK_MISSING');
   if(!PORTONE_CHANNEL_KEY || PORTONE_CHANNEL_KEY.includes('여기에')) throw new Error('CHANNEL_NOT_SET');
   const paymentId = genPaymentId();
-  const res = await window.PortOne.requestPayment({
+  const kakao = selectedPayMethod === 'kakaopay';
+  const req = {
     storeId: PORTONE_STORE_ID,
     channelKey: PORTONE_CHANNEL_KEY,
     paymentId,
     orderName,
     totalAmount: amount,
     currency: 'CURRENCY_KRW',
-    payMethod: 'CARD',
+    payMethod: kakao ? 'EASY_PAY' : 'CARD',
     customer: { fullName: customer.name, phoneNumber: customer.phone, email: customer.email },
     redirectUrl: location.origin + location.pathname
-  });
+  };
+  if(kakao) req.easyPay = { easyPayProvider: 'KAKAOPAY' };
+  const res = await window.PortOne.requestPayment(req);
   if(res && res.code != null) throw new Error(res.message || 'PAY_CANCELLED'); // 취소/실패
   return { paymentId: (res && res.paymentId) || paymentId };
 }
@@ -545,6 +560,7 @@ async function submitBooking(ev){
     // 2) 결제 (활성화된 경우에만)
     if(PAYMENT_ENABLED){
       btn.textContent='결제 진행 중…';
+      row.pay_method = selectedPayMethod;
       stashPendingOrder('booking', row);   // 모바일 리다이렉트 복귀용
       try{
         const pay = await requestPortonePayment({
@@ -552,7 +568,7 @@ async function submitBooking(ev){
           customer: { name: row.customer_name, phone: row.customer_phone, email: row.customer_email }
         });
         row.payment_id = pay.paymentId;
-        row.pay_method = 'card';
+        row.pay_method = selectedPayMethod;
         row.payment_status = 'paid'; // ⚠ 서버 검증 전 상태. 추후 Edge Function 검증 연동 필요.
       }catch(pe){
         clearPendingOrder();
@@ -757,6 +773,7 @@ async function submitReportOrder(ev){
     }
     if(PAYMENT_ENABLED){
       btn.textContent='결제 진행 중…';
+      row.pay_method = selectedPayMethod;
       stashPendingOrder('report', row);   // 모바일 리다이렉트 복귀용
       try{
         const pay = await requestPortonePayment({
@@ -764,7 +781,7 @@ async function submitReportOrder(ev){
           customer: { name, phone, email }
         });
         row.payment_id = pay.paymentId;
-        row.pay_method = 'card';
+        row.pay_method = selectedPayMethod;
         row.payment_status = 'paid'; // ⚠ 서버 검증 전 상태. 추후 Edge Function 검증 연동 필요.
       }catch(pe){
         clearPendingOrder();
@@ -916,6 +933,7 @@ async function submitPairReportOrder(ev){
 
     if(PAYMENT_ENABLED){
       btn.textContent='결제 진행 중…';
+      row.pay_method = selectedPayMethod;
       stashPendingOrder('pair', row);   // 모바일 리다이렉트 복귀용
       try{
         const pay = await requestPortonePayment({
@@ -923,7 +941,7 @@ async function submitPairReportOrder(ev){
           customer: { name:p1Name, phone:p1Phone, email:p1Email }
         });
         row.payment_id = pay.paymentId;
-        row.pay_method = 'card';
+        row.pay_method = selectedPayMethod;
         row.payment_status = 'paid'; // ⚠ 서버 검증 전 상태. 추후 Edge Function 검증 연동 필요.
       }catch(pe){
         clearPendingOrder();
@@ -1728,6 +1746,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
   if($('#bookingForm')) initBooking();
   if($('#reportOrderForm')) initReportOrder();
   if($('#pairOrderForm')) initPairReportOrder();
+  if($('#payMethodPick')) initPayMethodPick();
   if($('#adminScreen')) initAdmin();
   // 이메일 mailto 조합 (평문 노출/난독화 방지)
   const em = document.getElementById('emailLink');
