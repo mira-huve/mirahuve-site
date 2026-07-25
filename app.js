@@ -89,11 +89,18 @@ async function requestPortonePayment({ amount, orderName, customer }){
   return { paymentId: (res && res.paymentId) || paymentId };
 }
 
-/* ---- Supabase 연결 ---- */
+/* ---- Supabase 연결 ----
+   sbClient : 관리자용 — 로그인 세션을 저장·복원한다.
+   sbAnon   : 공개 신청 폼용 — 세션을 물려받지 않고 항상 익명(anon)으로 요청한다.
+              관리자로 로그인된 브라우저에서 신청 폼을 쓰면 요청이 authenticated 역할로 나가
+              anon 전용 RLS 정책(특히 Storage 업로드)에 걸려 실패하므로 반드시 분리해야 한다. */
 const CONFIGURED = !SUPABASE_ANON_KEY.includes('붙여넣으세요');
-let sbClient = null;
+let sbClient = null, sbAnon = null;
 if (CONFIGURED && window.supabase) {
   sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  sbAnon = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: { persistSession:false, autoRefreshToken:false, detectSessionInUrl:false, storageKey:'sb-mh-public' }
+  });
 }
 
 /* ---- 서비스·슬롯 규칙 ---- */
@@ -217,7 +224,7 @@ const db = {
     const ext = (file.name.split('.').pop()||'dat').replace(/[^a-zA-Z0-9]/g,'').toLowerCase();
     const safe = `report.${ext}`;
     const path = `${Date.now()}_${safe}`;
-    const { error } = await sbClient.storage.from('reports').upload(path, file, { upsert:false });
+    const { error } = await sbAnon.storage.from('reports').upload(path, file, { upsert:false });
     if(error) throw error;
     return path;
   },
@@ -229,7 +236,7 @@ const db = {
   async createBooking(row){
     if(!CONFIGURED) throw new Error('NOT_CONFIGURED');
     // .select() 없이 INSERT만 — 익명(anon)은 bookings 읽기 권한이 없으므로 반환 표현을 요구하지 않는다
-    const { error } = await sbClient.from('bookings').insert([row]);
+    const { error } = await sbAnon.from('bookings').insert([row]);
     if(error) throw error;
     return true;
   },
@@ -242,7 +249,7 @@ const db = {
   async bookingsOnDate(date){
     if(!CONFIGURED) return [];
     // 개인정보 없이 '해당 날짜의 예약된 시간대'만 반환하는 함수(RPC). anon도 실행 가능하나 고객 정보는 노출되지 않는다.
-    const { data } = await sbClient.rpc('slots_on_date', { d: date });
+    const { data } = await sbAnon.rpc('slots_on_date', { d: date });
     return data||[];
   },
   async customerHistory(email){
@@ -263,7 +270,7 @@ const db = {
   },
   async blocksOnDate(date){
     if(!CONFIGURED) return [];
-    const { data } = await sbClient.from('blocked_slots').select('block_time').eq('block_date',date);
+    const { data } = await sbAnon.from('blocked_slots').select('block_time').eq('block_date',date);
     return data||[];
   },
   async addBlock(row){
@@ -276,7 +283,7 @@ const db = {
   },
   async createReportOrder(row){
     if(!CONFIGURED) throw new Error('NOT_CONFIGURED');
-    const { error } = await sbClient.from('report_orders').insert([row]);
+    const { error } = await sbAnon.from('report_orders').insert([row]);
     if(error) throw error;
     return true;
   },
@@ -293,7 +300,7 @@ const db = {
   },
   async createPairReportOrder(row){
     if(!CONFIGURED) throw new Error('NOT_CONFIGURED');
-    const { error } = await sbClient.from('pair_report_orders').insert([row]);
+    const { error } = await sbAnon.from('pair_report_orders').insert([row]);
     if(error) throw error;
     return true;
   },

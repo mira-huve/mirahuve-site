@@ -87,6 +87,13 @@ create policy "anon upload reports"
   to anon
   with check (bucket_id = 'reports');
 
+-- 관리자(authenticated)로 로그인된 브라우저에서 신청 폼을 테스트할 때도 업로드가 가능하도록 허용
+drop policy if exists "admin upload reports" on storage.objects;
+create policy "admin upload reports"
+  on storage.objects for insert
+  to authenticated
+  with check (bucket_id = 'reports');
+
 create policy "admin read reports"
   on storage.objects for select
   to authenticated
