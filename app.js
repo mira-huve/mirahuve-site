@@ -16,9 +16,18 @@ const SUBMIT_LABEL = PAYMENT_ENABLED ? '결제하고 예약 신청하기' : '예
 function genPaymentId(){ return 'mh_' + Date.now() + '_' + Math.random().toString(36).slice(2,8); }
 
 /* ---- 결제수단 선택 (세 신청 폼 공통) ----
-   card: 이니시스 카드 결제창 · kakaopay: 카카오페이 간편결제 직접 호출 */
+   card: 이니시스 카드 결제창 · kakaopay: 카카오페이 간편결제 직접 호출
+   KAKAOPAY_ENABLED: 이니시스 MID에 카카오페이 지불수단이 활성화(현재 신청 반영 대기)되면
+   true로 바꾸고 HTML의 app.js ?v= 버전을 올려 배포한다. false면 선택 UI 자체를 숨긴다. */
+const KAKAOPAY_ENABLED = false;
 let selectedPayMethod = 'card';
 function initPayMethodPick(){
+  if(!KAKAOPAY_ENABLED){
+    const field = $('#payMethodPick')?.closest('.field');
+    if(field) field.hidden = true;
+    selectedPayMethod = 'card';
+    return;
+  }
   $$('#payMethodPick .pick').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       selectedPayMethod = btn.dataset.paymethod;
