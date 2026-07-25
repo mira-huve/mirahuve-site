@@ -577,7 +577,7 @@ async function submitBooking(ev){
     if(err.message==='NOT_CONFIGURED'){
       fail(msg,'예약 시스템이 아직 연결되지 않았습니다. (Supabase 키 입력 필요)');
     } else if(wantReport && file && !row.report_path){
-      fail(msg,'결과지 업로드에 실패했습니다. (Storage \'reports\' 버킷 설정을 확인해 주세요)');
+      fail(msg, uploadErrText(err));
       console.error(err);
     } else {
       fail(msg,'접수 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.');
@@ -586,6 +586,17 @@ async function submitBooking(ev){
   }finally{ btn.disabled=false; btn.textContent=SUBMIT_LABEL; }
 }
 function fail(el,t){ el.className='form-msg err'; el.textContent=t; }
+
+/* 결과지 업로드 실패 원인을 사용자 안내 문구로 변환 — 흔한 원인(네트워크·용량)은 해결 방법을,
+   그 외에는 실제 오류 내용을 그대로 보여줘 문의·재발 시 원인을 바로 파악할 수 있게 한다 */
+function uploadErrText(err){
+  const m = (err && (err.message || err.error_description)) || String(err) || '알 수 없는 오류';
+  if(/Failed to fetch|NetworkError|Load failed|network/i.test(m))
+    return '네트워크 연결이 불안정해 결과지 업로드에 실패했습니다. 연결 상태를 확인한 뒤 다시 시도해 주세요.';
+  if(/exceeded|too large|maximum allowed|payload/i.test(m))
+    return '결과지 파일이 너무 커서 업로드에 실패했습니다(최대 50MB). 파일 크기를 줄여 다시 시도해 주세요.';
+  return `결과지 업로드에 실패했습니다. 잠시 후 다시 시도해 주세요. (오류: ${m})`;
+}
 
 /* 접수 완료 안내 팝업 — [확인]을 누르면 닫히고 메인페이지로 이동한다. 세 신청 폼이 공유한다. */
 function showNotice(text){
@@ -778,7 +789,7 @@ async function submitReportOrder(ev){
     if(err.message==='NOT_CONFIGURED'){
       fail(msg,'신청 시스템이 아직 연결되지 않았습니다. (Supabase 키 입력 필요)');
     } else if(hasReport && !row.report_path){
-      fail(msg,'결과지 업로드에 실패했습니다. (Storage \'reports\' 버킷 설정을 확인해 주세요)');
+      fail(msg, uploadErrText(err));
       console.error(err);
     } else {
       fail(msg,'접수 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.');
@@ -935,7 +946,7 @@ async function submitPairReportOrder(ev){
     if(err.message==='NOT_CONFIGURED'){
       fail(msg,'신청 시스템이 아직 연결되지 않았습니다. (Supabase 키 입력 필요)');
     } else if((p1HasReport && !row.person1_report_path) || (p2HasReport && !row.person2_report_path)){
-      fail(msg,'결과지 업로드에 실패했습니다. (Storage \'reports\' 버킷 설정을 확인해 주세요)');
+      fail(msg, uploadErrText(err));
       console.error(err);
     } else {
       fail(msg,'접수 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.');
