@@ -1313,7 +1313,7 @@ function reportOrderCard(o){
 /* 리포트 신청 접수 메일(Gmail compose) */
 function buildReportMail(o, type='received'){
   const confirmed = type==='confirmed';
-  const personas = (o.personas||[]).length ? (o.personas||[]).join(', ') : '없음';
+  const personas = (o.personas||[]).length ? (o.personas||[]).join(', ') : '베이직리포트';
   if(type==='delivery'){                                // 완성된 리포트 발송 안내 메일
     const dLines = [
       `안녕하세요, ${o.customer_name} 님.`,
