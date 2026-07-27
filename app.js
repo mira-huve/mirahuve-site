@@ -12,12 +12,13 @@ const PAYMENT_ENABLED = true;
 const PORTONE_STORE_ID = 'store-bd5de6ee-17d5-4b4d-a7c5-18c8fc1d54db';
 const PORTONE_CHANNEL_KEY = 'channel-key-a3c2dc4b-f952-4c2b-a7e0-2af060cff408'; // KG이니시스 실운영 (카드)
 const PORTONE_KAKAOPAY_CHANNEL_KEY = 'channel-key-9d32993f-9be7-48a7-9c36-3d47a2ee3293'; // 카카오페이 직연동 실운영
+const PORTONE_TOSSPAY_CHANNEL_KEY = 'channel-key-467225be-7af3-445a-83ab-a125f9f45aed'; // 토스페이 직연동 실운영
 const SUBMIT_LABEL = PAYMENT_ENABLED ? '결제하고 예약 신청하기' : '예약 신청하기';
 
 function genPaymentId(){ return 'mh_' + Date.now() + '_' + Math.random().toString(36).slice(2,8); }
 
 /* ---- 결제수단 선택 (세 신청 폼 공통) ----
-   card: 이니시스 카드 결제창 · kakaopay: 카카오페이 직연동 채널(EASY_PAY) 호출
+   card: 이니시스 카드 결제창 · kakaopay/tosspay: 각 간편결제 직연동 채널(EASY_PAY) 호출
    KAKAOPAY_ENABLED를 false로 바꾸면 선택 UI가 숨겨지고 카드로만 결제한다. */
 const KAKAOPAY_ENABLED = true;
 let selectedPayMethod = 'card';
@@ -92,15 +93,16 @@ async function requestPortonePayment({ amount, orderName, customer }){
   if(!window.PortOne) throw new Error('PORTONE_SDK_MISSING');
   if(!PORTONE_CHANNEL_KEY || PORTONE_CHANNEL_KEY.includes('여기에')) throw new Error('CHANNEL_NOT_SET');
   const paymentId = genPaymentId();
-  const kakao = selectedPayMethod === 'kakaopay';
+  const EASYPAY_CHANNELS = { kakaopay: PORTONE_KAKAOPAY_CHANNEL_KEY, tosspay: PORTONE_TOSSPAY_CHANNEL_KEY };
+  const easyChannel = EASYPAY_CHANNELS[selectedPayMethod];
   const req = {
     storeId: PORTONE_STORE_ID,
-    channelKey: kakao ? PORTONE_KAKAOPAY_CHANNEL_KEY : PORTONE_CHANNEL_KEY,
+    channelKey: easyChannel || PORTONE_CHANNEL_KEY,
     paymentId,
     orderName,
     totalAmount: amount,
     currency: 'CURRENCY_KRW',
-    payMethod: kakao ? 'EASY_PAY' : 'CARD',
+    payMethod: easyChannel ? 'EASY_PAY' : 'CARD',
     customer: { fullName: customer.name, phoneNumber: customer.phone, email: customer.email },
     redirectUrl: location.origin + location.pathname
   };
