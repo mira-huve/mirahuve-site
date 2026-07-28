@@ -1132,6 +1132,12 @@ function renderBookings(){
   rows.forEach(b=> list.appendChild(bookingCard(b)));
 }
 
+/* 신청일시 한 줄 — created_at(UTC)을 관리자 로컬 시각으로 표시 */
+function appliedAtHtml(row){
+  if(!row.created_at) return '';
+  return `<div class="bk-applied">🕓 신청 · ${fmtDateTime(new Date(row.created_at).getTime())}</div>`;
+}
+
 function bookingCard(b){
   const dow = DOW[parseDate(b.booking_date).getDay()];
   const active = (b.status==='pending'||b.status==='confirmed');
@@ -1165,6 +1171,7 @@ function bookingCard(b){
       <span class="bk-badge">${STATUS_LABEL[b.status]||b.status}</span>
     </div>
     <div class="bk-when">📅 ${b.booking_date} (${dow}) ${b.booking_time}</div>
+    ${appliedAtHtml(b)}
     <div class="bk-contact">${esc(b.customer_phone)} · ${esc(b.customer_email)}</div>
     ${priceRow(b)}
     ${prepHtml}
@@ -1277,6 +1284,7 @@ function reportOrderCard(o){
       </div>
       <span class="bk-badge">${STATUS_LABEL[o.status]||o.status}</span>
     </div>
+    ${appliedAtHtml(o)}
     <div class="bk-contact">${esc(o.customer_phone)} · ${esc(o.customer_email)}</div>
     <div class="bk-price">💳 <strong>${won(o.total_price)}</strong>${paidTag}</div>
     <div class="bk-purpose"><strong>추가 옵션</strong> — ${esc(personas)}</div>
@@ -1461,6 +1469,7 @@ function pairReportOrderCard(o){
       </div>
       <span class="bk-badge">${STATUS_LABEL[o.status]||o.status}</span>
     </div>
+    ${appliedAtHtml(o)}
     <div class="bk-contact">${esc(personTag(o.person1_role, o.person1_name))} · ${esc(o.person1_phone)} · ${esc(o.person1_email)}</div>
     <div class="bk-contact">${esc(personTag(o.person2_role, o.person2_name))} · ${esc(o.person2_phone)} · ${esc(o.person2_email)}</div>
     <div class="bk-price">💳 <strong>${won(o.total_price)}</strong>${paidTag}</div>

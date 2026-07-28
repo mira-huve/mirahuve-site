@@ -470,3 +470,4 @@ footer .small{font-size:10px;letter-spacing:0.3em;margin-top:20px;opacity:0.8;fo
 /* 결제수단 선택 (신청 폼 공통) */
 .paymethod-pick{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:8px;}
 @media (max-width:520px){ .paymethod-pick{grid-template-columns:1fr;} }
+.bk-applied{font-size:12px;opacity:0.55;margin-top:2px;}
