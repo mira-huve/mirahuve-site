@@ -2060,6 +2060,25 @@ const STORY_ENTRY_LABEL  = { has_report:'결과지 보유', paid:'진단 구매'
 let allStorySubmissions = [];
 let currentStoryFilter = 'all';
 
+/* SC 번호 — 접수 순서가 아니라 '채택 순서' 연번이다. 이미 쓰인 번호의 최대값+1을 제안한다. */
+function parseEpisodeNo(v){
+  const m = String(v||'').trim().match(/^SC\s*0*(\d{1,3})$/i);
+  return m ? parseInt(m[1],10) : null;
+}
+function normalizeEpisodeNo(v){                            // "3" · "sc3" · "SC03" 을 모두 SC03 으로
+  const raw = String(v||'').trim();
+  if(!raw) return null;
+  const m = raw.match(/^(?:SC)?\s*0*(\d{1,3})$/i);
+  return m ? 'SC'+String(parseInt(m[1],10)).padStart(2,'0') : raw;
+}
+function nextStoryEpisodeNo(){
+  const max = allStorySubmissions.reduce((m,s)=> Math.max(m, parseEpisodeNo(s.episode_no)||0), 0);
+  return 'SC'+String(max+1).padStart(2,'0');
+}
+function episodeNoOwner(no, exceptId){                     // 같은 번호를 이미 쓰고 있는 다른 사연
+  return allStorySubmissions.find(s=> s.id!==exceptId && normalizeEpisodeNo(s.episode_no)===no);
+}
+
 async function loadStorySubmissions(){
   const list=$('#storyList'); list.innerHTML='<p class="muted">불러오는 중…</p>';
   if(!CONFIGURED){ list.innerHTML='<p class="muted">Supabase 키 입력 후 이용할 수 있습니다.</p>'; return; }
@@ -2146,15 +2165,23 @@ function storySubmissionCard(s){
       ${repBtn}
     </div>
     <div class="bk-memo">
-      <input type="text" class="st-ep" placeholder="SC 번호 (예: SC01)" value="${esc(s.episode_no||'')}">
+      <input type="text" class="st-ep" placeholder="SC 번호 — 다음은 ${esc(nextStoryEpisodeNo())} (클릭하면 채워짐)" value="${esc(s.episode_no||'')}">
       <textarea rows="2" placeholder="제작 메모…">${esc(s.memo||'')}</textarea>
       <button class="mini-btn ghost act-memo" style="margin-top:6px;">메모 · 번호 저장</button>
     </div>`;
 
+  const epEl = el.querySelector('.st-ep');
+  epEl.addEventListener('focus', ()=>{                       // 빈 칸을 클릭하면 다음 번호를 채워 넣는다(저장은 버튼으로)
+    if(!epEl.value.trim()){ epEl.value = nextStoryEpisodeNo(); epEl.select(); }
+  });
+
   el.querySelector('.st-sel').addEventListener('change', async e=>{
     const ns=e.target.value;
+    const patch={status:ns};
+    if(ns==='selected' && !String(s.episode_no||'').trim())   // 채택하는 순간 다음 연번을 붙인다 — 비어 있을 때만, 메모칸에서 고칠 수 있다
+      patch.episode_no = nextStoryEpisodeNo();
     try{
-      await db.updateStorySubmission(s.id,{status:ns}); s.status=ns;
+      await db.updateStorySubmission(s.id,patch); Object.assign(s,patch);
       el.className=`bk-card s-${s.status}`;
       el.querySelector('.bk-badge').textContent=STORY_STATUS_LABEL[s.status];
       if(ns==='selected'){                                   // 채택 시 선정 안내 메일 작성창을 바로 연다
@@ -2184,10 +2211,17 @@ function storySubmissionCard(s){
 
   el.querySelector('.act-memo').addEventListener('click', async ()=>{
     const memo = el.querySelector('textarea').value;
-    const ep   = el.querySelector('.st-ep').value.trim() || null;
+    const ep   = normalizeEpisodeNo(epEl.value);
+    if(ep){
+      const dup = episodeNoOwner(ep, s.id);                   // 같은 번호를 두 사연에 붙이는 사고를 막는다
+      if(dup && !confirm(`${ep} 은 이미 "${dup.nickname}" 사연에 붙어 있습니다.\n그래도 같은 번호를 쓸까요?`)) return;
+    }
     try{
       await db.updateStorySubmission(s.id,{memo, episode_no:ep});
       s.memo=memo; s.episode_no=ep;
+      epEl.value = ep || '';
+      el.querySelector('.bk-svc').textContent =
+        `강점 상담소 · ${STORY_ENTRY_LABEL[s.entry_type]||s.entry_type||'—'}${s.episode_no ? ' · '+s.episode_no : ''}`;
       flash(el.querySelector('.act-memo'),'저장됨');
     }catch(err){ alert('저장 실패'); console.error(err); }
   });
