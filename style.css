@@ -272,6 +272,7 @@ a{color:inherit;text-decoration:none;}
 
 /* ============ PROCESS ============ */
 .process-line{margin-top:50px;display:grid;grid-template-columns:repeat(4,1fr);gap:24px;position:relative;}
+.process-line.three{grid-template-columns:repeat(3,1fr);}
 .proc-step{text-align:center;padding:0 6px;}
 .proc-dot{
   width:46px;height:46px;border-radius:50%;margin:0 auto 16px;
@@ -448,6 +449,19 @@ footer .small{font-size:10px;letter-spacing:0.3em;margin-top:20px;opacity:0.8;fo
 .hist-when{font-weight:600;}
 .hist-meta{font-size:12px;opacity:0.7;margin-top:3px;}
 
+/* '매달 2분' 이벤트 안내 — 사연 접수 페이지 인라인에 있던 것을 공용으로 옮겼다 */
+.story-event{
+  margin-top:26px;padding:20px 24px;border-radius:12px;
+  background:rgba(116,99,157,0.10);border:1px solid rgba(116,99,157,0.28);
+  text-align:center;
+}
+.story-event .se-tag{
+  display:inline-block;font-size:11px;letter-spacing:-0.01em;font-weight:600;
+  color:var(--rust);border:1px solid rgba(90,77,122,0.35);border-radius:999px;padding:4px 14px;margin-bottom:10px;
+}
+.story-event p{font-size:14.5px;line-height:1.8;color:var(--deep);}
+.story-event strong{color:var(--rust);font-weight:700;}
+
 /* ============ RESPONSIVE ============ */
 @media (max-width:860px){
   #nav{padding:12px 18px;}
@@ -472,7 +486,7 @@ footer .small{font-size:10px;letter-spacing:0.3em;margin-top:20px;opacity:0.8;fo
   .section{padding:70px 22px;}
   .section-title{font-size:27px;}
   .about-grid{grid-template-columns:1fr;gap:30px;}
-  .domain-grid,.service-grid,.process-line,.persona-pick{grid-template-columns:1fr;}
+  .domain-grid,.service-grid,.process-line,.process-line.three,.persona-pick{grid-template-columns:1fr;}
   .field-row{grid-template-columns:1fr;}
   .service-pick{grid-template-columns:1fr;}
 }
