@@ -471,3 +471,28 @@ footer .small{font-size:10px;letter-spacing:0.3em;margin-top:20px;opacity:0.8;fo
 .paymethod-pick{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:8px;}
 @media (max-width:520px){ .paymethod-pick{grid-template-columns:1fr;} }
 .bk-applied{font-size:12px;opacity:0.55;margin-top:2px;}
+
+/* ---- 강점 상담소 사연 카드(어드민) ---- */
+.bk-card.s-received{border-left-color:var(--key-blue);}
+.bk-card.s-shortlisted{border-left-color:var(--gold);}
+.bk-card.s-selected{border-left-color:#1a7a4a;}
+.bk-card.s-aired{border-left-color:#2a3a5a;}
+.bk-card.s-declined{border-left-color:#999;opacity:0.7;}
+/* 사연자가 가장 듣고 싶어 한 질문 — 카드에서 제일 먼저 눈에 들어와야 한다 */
+.bk-question{
+  margin-top:12px;padding:10px 14px;border-radius:8px;
+  background:rgba(116,99,157,0.10);color:var(--rust);
+  font-size:14px;font-weight:600;line-height:1.6;
+}
+/* 사연 본문 — 길어질 수 있으므로 카드 안에서 스크롤시킨다 */
+.bk-story{
+  margin-top:10px;padding:12px 14px;border-radius:8px;
+  background:rgba(13,20,36,0.035);border:1px solid rgba(13,20,36,0.07);
+  font-size:13px;line-height:1.85;color:var(--deep);
+  max-height:220px;overflow-y:auto;white-space:normal;
+}
+.bk-memo .st-ep{
+  width:100%;padding:8px 10px;margin-bottom:6px;
+  border:1px solid rgba(13,20,36,0.15);border-radius:6px;
+  font-family:var(--font);font-size:13px;
+}

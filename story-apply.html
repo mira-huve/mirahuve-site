@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>강점 상담소 사연 접수 · MIRA HUVE</title>
+<meta name="description" content="MIRA HUVE 유튜브 코너 '강점 상담소'에 고민 사연을 보내주세요. 갤럽 CliftonStrengths 강점으로 그 고민을 다시 읽어드립니다. 선정되신 분께는 강점 진단 34개 전체 결과지를 무료로 보내드립니다.">
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" href="style.css?v=20260912a">
+<style>
+/* 신청 페이지 전용 미니 헤더 — 전체 nav 대신 로고 + 홈으로 링크만 두어 접수 흐름에 집중시킨다 */
+.mini-head{
+  background:radial-gradient(ellipse at 30% 40%,#2a3a5a 0%,#0d1424 70%);
+  padding:20px 32px;
+}
+.mini-head-in{max-width:1100px;margin:0 auto;display:flex;align-items:center;gap:10px;}
+.mini-head .nav-name{color:var(--paper);font-weight:300;letter-spacing:4px;font-size:15px;}
+.mini-head a.home{
+  margin-left:auto;font-size:13px;color:var(--gold-light);text-decoration:none;
+  border:1px solid rgba(183,167,214,.35);border-radius:999px;padding:8px 18px;transition:border-color .2s;
+}
+.mini-head a.home:hover{border-color:var(--gold-light);}
+
+/* 선정자 무료 결과지 이벤트 — 접수의 가장 큰 이유이므로 눈에 띄게 */
+.story-event{
+  margin-top:26px;padding:20px 24px;border-radius:12px;
+  background:rgba(116,99,157,0.10);border:1px solid rgba(116,99,157,0.28);
+  text-align:center;
+}
+.story-event .se-tag{
+  display:inline-block;font-size:11px;letter-spacing:2px;font-weight:600;
+  color:var(--rust);border:1px solid rgba(90,77,122,0.35);border-radius:999px;padding:4px 14px;margin-bottom:10px;
+}
+.story-event p{font-size:14.5px;line-height:1.8;color:var(--deep);}
+.story-event strong{color:var(--rust);font-weight:700;}
+
+/* 다루지 않는 주제 안내 — 강점 해석의 범위 밖이라는 점을 접수 전에 분명히 알린다 */
+.story-safety{
+  margin-top:22px;padding:16px 20px;border-radius:10px;
+  background:rgba(13,20,36,0.035);border-left:3px solid rgba(90,77,122,0.4);
+  font-size:13px;line-height:1.8;color:var(--deep);
+}
+.story-safety b{color:var(--rust);}
+
+/* 이 페이지의 절차는 3단계 — 공용 4칸 그리드를 3칸으로 덮는다 (모바일 1칸 규칙은 건드리지 않는다) */
+@media(min-width:861px){ #storyApply .process-line{grid-template-columns:repeat(3,1fr);} }
+.strength-pick{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:22px;}
+.strength-pick .pick{padding:18px 12px;text-align:left;gap:6px;}
+.strength-pick .pick span{line-height:1.5;}
+@media(max-width:700px){.strength-pick{grid-template-columns:1fr;}}
+.story-block{margin-top:40px;padding-top:30px;border-top:1px solid rgba(13,20,36,0.1);}
+.story-consents{margin-top:30px;padding-top:26px;border-top:1px solid rgba(13,20,36,0.1);}
+.story-consents .ra-title{margin-bottom:14px;}
+.field textarea{resize:vertical;line-height:1.8;}
+.char-count{display:block;font-size:12px;opacity:0.55;margin-top:6px;text-align:right;}
+</style>
+</head>
+<body>
+
+<!-- ============ MINI HEADER ============ -->
+<header class="mini-head">
+  <div class="mini-head-in">
+    <svg class="nav-mark" width="30" height="30" viewBox="0 0 360 360" aria-hidden="true">
+      <g stroke="rgba(183,167,214,0.8)" stroke-width="6" fill="none" stroke-linecap="round">
+        <line x1="90" y1="220" x2="140" y2="130"/>
+        <line x1="140" y1="130" x2="180" y2="195"/>
+        <line x1="180" y1="195" x2="220" y2="130"/>
+        <line x1="220" y1="130" x2="270" y2="220"/>
+      </g>
+      <g fill="#f4f1ea">
+        <circle cx="90" cy="220" r="11"/>
+        <circle cx="140" cy="130" r="12"/>
+        <circle cx="220" cy="130" r="12"/>
+        <circle cx="270" cy="220" r="11"/>
+      </g>
+      <circle cx="180" cy="195" r="14" fill="#B7A7D6"/>
+    </svg>
+    <span class="nav-name">MIRA HUVE</span>
+    <a class="home" href="index.html">← 홈으로</a>
+  </div>
+</header>
+
+<!-- ============ 사연 접수 본문 ============ -->
+<section class="section report reveal visible" id="storyApply">
+  <div class="section-eyebrow">MIRA HUVE 강점 상담소 · 사연 접수</div>
+  <h2 class="section-title">그 이야기, <span class="accent">강점</span> 때문일 수 있습니다.</h2>
+  <p class="report-intro">
+    강점 상담소는 보내주신 이야기를 갤럽 CliftonStrengths 강점으로 다시 읽어드리는 유튜브 코너입니다.
+    <strong>꼭 고민이 아니어도 괜찮습니다.</strong> 궁금한 것, 알고 싶은 것, 늘 마음에 걸리던 것 —
+    무엇이든 남겨주세요.
+  </p>
+
+  <div class="story-event">
+    <span class="se-tag">매달 2분</span>
+    <p>
+      보내주신 이야기 중에서 <strong>매달 두 분을 뽑아, 갤럽 강점 진단 34개 전체를 무료로</strong> 보내드립니다.<br>
+      결과지가 이미 있으시면 함께 올려주세요 — 당신의 실제 강점으로 이야기를 읽어드릴 수 있습니다.
+    </p>
+  </div>
+
+  <!-- 코너 절차 -->
+  <div class="report-process">
+    <h3 class="rp-title">진행 절차</h3>
+    <div class="process-line">
+      <div class="proc-step">
+        <div class="proc-dot">1</div>
+        <h4>이야기 남기기</h4>
+        <p>고민이든 궁금한 것이든, 가장 듣고 싶은 질문 한 가지와 함께 남겨주세요.</p>
+      </div>
+      <div class="proc-step">
+        <div class="proc-dot">2</div>
+        <h4>강점 결과지</h4>
+        <p>있으시면 바로 올려주세요. 없으시면 진단을 신청하시거나, 매달 두 분께 드리는 무료 진단을 기다리셔도 됩니다.</p>
+      </div>
+      <div class="proc-step">
+        <div class="proc-dot">3</div>
+        <h4>영상 공개</h4>
+        <p>이야기는 적어주신 호칭인 가명으로 소개하고, 강점으로 풀어낸 답을 나눕니다.</p>
+      </div>
+    </div>
+  </div>
+
+  <h3 class="rp-title rp-report">이야기 남기기</h3>
+  <p class="report-intro">
+    이름 대신 <strong>영상에서 불릴 호칭</strong>을 적어주세요. 보내주신 이야기는 적어주신 호칭인 가명으로 소개하며,
+    회사·학교·지역처럼 신원이 드러날 수 있는 내용은 영상에 쓰지 않습니다.
+  </p>
+
+  <div class="story-safety">
+    <b>다음 주제는 이 코너에서 다루지 않습니다</b> — 폭력·학대·자해·중독, 정신건강 진단이나 치료가 필요한 상황,
+    의료·법률 분쟁. 강점 해석으로 도울 수 있는 범위를 넘어서기 때문입니다.
+    지금 힘든 상황에 계시다면 전문기관의 도움을 먼저 받으시길 권합니다
+    (자살예방상담전화 <b>109</b> · 정신건강상담전화 <b>1577-0199</b>, 24시간).
+  </div>
+
+  <form id="storyForm" class="booking-card report-order-card" autocomplete="off">
+
+    <div class="story-block">
+      <h3 class="ra-title">남기고 싶은 이야기</h3>
+      <p class="ra-desc" style="margin-bottom:18px;">고민이어도 좋고, 아니어도 좋습니다. 궁금한 것·알고 싶은 것·마음에 걸리던 것 무엇이든 괜찮아요.</p>
+
+      <div class="field">
+        <label for="stStory">이야기</label>
+        <textarea id="stStory" rows="12" maxlength="3000" required
+          placeholder="어떤 상황인지, 무엇이 궁금한지 편하게 적어주세요.&#10;&#10;· 꼭 힘든 이야기가 아니어도 됩니다 — &#34;나는 왜 이럴까&#34; 싶은 순간이면 충분해요.&#10;· 언제부터 그랬는지, 어떤 장면에서 특히 그런지 적어주시면 강점으로 읽기가 훨씬 정확해집니다.&#10;· 실명·회사명·학교명은 적지 않으셔도 됩니다."></textarea>
+        <span class="char-count" id="storyCount">0 / 3000자</span>
+      </div>
+
+      <div class="field">
+        <label for="stQuestion">가장 듣고 싶은 질문 한 가지</label>
+        <input type="text" id="stQuestion" maxlength="120" required
+          placeholder="예) 저는 왜 늘 제가 다 떠안게 될까요?">
+        <small class="hint">이 한 문장으로 영상을 열고 닫습니다. 가장 궁금한 것 하나만 적어주세요.</small>
+      </div>
+    </div>
+
+    <div class="story-block">
+      <h3 class="ra-title">당신의 강점</h3>
+      <p class="ra-desc" style="margin-bottom:18px;">
+        강점 결과지가 있으면 <strong>당신의 실제 강점</strong>으로 이야기를 읽어드립니다.
+        없으셔도 이야기는 남기실 수 있어요.
+      </p>
+
+      <div class="strength-pick" id="strengthPick">
+        <button type="button" class="pick spick" data-entry="has_report">
+          <strong>결과지가 있어요</strong>
+          <span>갤럽 34개 전체 결과지를 지금 올릴게요</span>
+        </button>
+        <button type="button" class="pick spick" data-entry="paid">
+          <strong>진단을 받을게요</strong>
+          <span>50,000원 · 결제하면 진단 코드를 보내드려요</span>
+        </button>
+        <button type="button" class="pick spick" data-entry="free_draw">
+          <strong>이야기만 남길게요</strong>
+          <span>매달 두 분께 드리는 무료 진단을 기다릴게요</span>
+        </button>
+      </div>
+
+      <!-- ① 결과지 보유 -->
+      <div class="field report-upload" id="stReportWrap" hidden>
+        <label for="stReportFile">강점 진단 결과지 업로드 (PDF · 이미지)</label>
+        <input type="file" id="stReportFile" accept=".pdf,.png,.jpg,.jpeg,.webp">
+        <small class="hint">갤럽 CliftonStrengths <b>34개 전체</b> 결과지여야 합니다. Top 5만 있는 결과지로는 깊이 읽어드리기 어려워요.</small>
+      </div>
+
+      <!-- ② 진단 구매 -->
+      <div id="stPaidWrap" hidden>
+        <div class="story-safety" style="border-left-color:rgba(116,99,157,0.55);">
+          결제하시면 <b>갤럽 강점 진단(CliftonStrengths) 34개 전체 코드</b>를 이메일로 보내드립니다.
+          진단은 30~40분 정도 방해받지 않는 시간이 필요하고, 마치신 뒤 함께 보내드린 링크로
+          <b>결과지만 다시 올려주시면</b> 됩니다. 이야기를 다시 쓰실 필요는 없어요.
+        </div>
+
+        <div class="field-row" style="margin-top:22px;">
+          <div class="field">
+            <label for="stName">이름</label>
+            <input type="text" id="stName" maxlength="30" placeholder="결제자 본인 이름">
+            <small class="hint">결제·환불 확인에만 씁니다. 영상에는 쓰지 않아요.</small>
+          </div>
+          <div class="field">
+            <label for="stPhone">연락처</label>
+            <input type="tel" id="stPhone" maxlength="20" placeholder="010-0000-0000">
+          </div>
+        </div>
+
+        <div class="field">
+          <label>결제수단</label>
+          <div class="paymethod-pick" id="payMethodPick">
+            <button type="button" class="pick active" data-paymethod="card"><strong>신용·체크카드</strong><span>일반 카드 결제</span></button>
+            <button type="button" class="pick" data-paymethod="kakaopay"><strong>카카오페이</strong><span>카카오 간편결제</span></button>
+            <button type="button" class="pick" data-paymethod="tosspay"><strong>토스페이</strong><span>토스 간편결제</span></button>
+          </div>
+        </div>
+
+        <div class="price-line"><strong>50,000원</strong></div>
+      </div>
+
+      <!-- ③ 무료 추첨 대기 -->
+      <div class="story-safety" id="stDrawWrap" hidden>
+        좋습니다 — 이야기만 남기셔도 됩니다.
+        <b>매달 두 분을 뽑아 갤럽 강점 진단 34개 전체를 무료로</b> 보내드려요.
+        뽑히시면 이메일로 코드와 결과지 업로드 링크를 함께 보내드립니다.
+        (마음이 바뀌시면 언제든 다시 오셔서 진단을 신청하셔도 됩니다.)
+      </div>
+    </div>
+
+    <div class="story-block">
+      <h3 class="ra-title">연락처</h3>
+
+      <div class="field-row">
+        <div class="field">
+          <label for="stNickname">영상에서 불릴 호칭</label>
+          <input type="text" id="stNickname" maxlength="20" required placeholder="예) 늘 미안한 팀장">
+          <small class="hint">실명 대신 별명이나 상황을 담은 호칭을 적어주세요.</small>
+        </div>
+        <div class="field">
+          <label for="stEmail">이메일</label>
+          <input type="email" id="stEmail" required placeholder="example@email.com">
+          <small class="hint">선정 안내·진단 코드·업로드 링크 발송에만 씁니다.</small>
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label for="stAge">연령대 <span style="font-weight:400;opacity:.55;">(선택)</span></label>
+          <select id="stAge">
+            <option value="">선택 안 함</option>
+            <option>10대</option>
+            <option>20대</option>
+            <option>30대</option>
+            <option>40대</option>
+            <option>50대</option>
+            <option>60대 이상</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="stJob">하는 일 <span style="font-weight:400;opacity:.55;">(선택)</span></label>
+          <input type="text" id="stJob" maxlength="30" placeholder="예) 사무직, 학생, 자영업">
+          <small class="hint">영상에서는 뭉뚱그려 말합니다.</small>
+        </div>
+      </div>
+    </div>
+
+    <div class="story-consents">
+      <h3 class="ra-title">동의</h3>
+
+      <div class="field check">
+        <label class="checkbox">
+          <input type="checkbox" id="stConsentBroadcast">
+          <span><b>[필수]</b> 제 이야기가 실명 대신 <b>제가 적은 호칭(가명)</b>으로 영상에 소개되는 데 동의합니다. 회사·학교·지역처럼 신원이 드러날 수 있는 내용은 영상에 쓰지 않습니다.</span>
+        </label>
+      </div>
+
+      <div class="field check">
+        <label class="checkbox">
+          <input type="checkbox" id="stConsentPrivacy">
+          <span><b>[필수]</b> 개인정보 수집·이용에 동의합니다. (<a href="privacy.html" target="_blank" style="text-decoration:underline;">개인정보처리방침</a>)</span>
+        </label>
+      </div>
+
+      <div class="field check">
+        <label class="checkbox">
+          <input type="checkbox" id="stConsentResearch">
+          <span><b>[선택]</b> 제출한 강점 결과지를 미라휴브의 강점 연구 데이터로 <b>익명 축적</b>하는 데 동의합니다. 동의하지 않으셔도 사연 접수와 선정에는 영향이 없습니다.</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="booking-note">
+      · 보내주신 이야기가 모두 영상으로 만들어지지는 않습니다. 선정되면 제작 전에 이메일로 먼저 연락드립니다.<br>
+      · 영상에 소개할 때는 회사·학교·지역·직함처럼 신원이 드러날 수 있는 내용을 바꾸거나 지웁니다.<br>
+      · 보내주신 원문은 제작 목적으로만 쓰며 외부에 공개하지 않습니다.<br>
+      · 진단 코드는 발송 전에는 전액 환불됩니다. 코드를 이미 보내드린 뒤에는 환불이 어렵습니다 (<a href="refund.html">환불·취소 정책</a>).<br>
+      · 접수 후에도 마음이 바뀌시면 <a href="#" id="withdrawMail">이메일</a>로 알려주세요 — 사연을 삭제해 드립니다.
+    </div>
+
+    <button type="submit" class="btn-primary full" id="storySubmitBtn">사연 보내기</button>
+    <div class="form-msg" id="storyFormMsg"></div>
+  </form>
+</section>
+
+<!-- ============ FOOTER ============ -->
+<footer>
+  사람은 저마다의 별로 빛납니다.<br>
+  우리가 할 일은 그 별을 잇는 선을 함께 그어보는 일뿐.
+  <div class="footer-social">
+    <a class="social-link" href="https://youtube.com/@mirahuve" target="_blank" rel="noopener" aria-label="YouTube">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="2" y="5" width="20" height="14" rx="4"/>
+        <path d="M10 9l5 3-5 3V9z" fill="currentColor" stroke="none"/>
+      </svg>
+    </a>
+    <a class="social-link" href="https://instagram.com/MIRA_HUVE" target="_blank" rel="noopener" aria-label="Instagram">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="3" width="18" height="18" rx="5"/>
+        <circle cx="12" cy="12" r="4"/>
+        <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/>
+      </svg>
+    </a>
+    <a class="social-link" id="emailLink" href="#" data-user="mira" data-domain="mirahuve.com" aria-label="이메일">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="5" width="18" height="14" rx="2"/>
+        <path d="M3 7l9 6 9-6"/>
+      </svg>
+    </a>
+  </div>
+  <div class="small">MIRA HUVE · HUMAN LOVE · 2026</div>
+  <div class="footer-legal">
+    <a href="terms.html">이용약관</a> · <a href="privacy.html">개인정보처리방침</a> · <a href="refund.html">환불·취소 정책</a>
+  </div>
+  <div class="footer-biz">
+    주식회사 미라휴브 · 대표 박미라 · 사업자등록번호 639-87-03882<br>
+    통신판매업 신고 준비중 · 서울특별시 강남구 테헤란로33길 18, 549호(역삼동, 서울철강빌딩)<br>
+    전화 010-5205-5870 · 이메일 mira@mirahuve.com
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="app.js?v=20260912a"></script>
+</body>
+</html>

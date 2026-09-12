@@ -54,7 +54,7 @@ async function handlePaymentRedirect(){
   history.replaceState(null, '', location.pathname + location.hash); // 새로고침 시 중복 저장 방지
   const pending = readPendingOrder();
   if(!pending || !pending.row) return;
-  const msg = $({ booking:'#formMsg', report:'#reportFormMsg', pair:'#pairFormMsg' }[pending.kind] || '#formMsg');
+  const msg = $({ booking:'#formMsg', report:'#reportFormMsg', pair:'#pairFormMsg', story:'#storyFormMsg' }[pending.kind] || '#formMsg');
   if(code != null){
     clearPendingOrder();
     if(msg) fail(msg,'결제가 취소되었거나 완료되지 않았습니다. 다시 시도해 주세요.');
@@ -66,7 +66,9 @@ async function handlePaymentRedirect(){
     await verifyAndSave(pending.kind, row);   // 서버가 포트원 결제 확인 후 저장
     if(pending.kind==='booking') slotCache.delete(row.booking_date);
     clearPendingOrder();
-    const okText = pending.kind==='booking'
+    const okText = pending.kind==='story'
+      ? storyStatusText('paid')
+      : pending.kind==='booking'
       ? '결제가 완료되어 예약이 접수되었습니다. 확정 안내 메일을 곧 보내드릴게요. 감사합니다.'
       : pending.kind==='report'
         ? (row.has_report
@@ -347,6 +349,38 @@ const db = {
     patch.updated_at = new Date().toISOString();
     const { error } = await sbClient.from('pair_report_orders').update(patch).eq('id',id);
     if(error) throw error;
+  },
+  async createStorySubmission(row){
+    if(!CONFIGURED) throw new Error('NOT_CONFIGURED');
+    // 사연 본문은 민감하다 — 익명(anon)은 INSERT만 가능하므로 .select()로 반환을 요구하지 않는다
+    const { error } = await sbAnon.from('story_submissions').insert([row]);
+    if(error) throw error;
+    return true;
+  },
+  async listStorySubmissions(){
+    if(!CONFIGURED) return [];
+    const { data, error } = await sbClient.from('story_submissions').select('*').order('created_at',{ascending:false});
+    if(error) throw error;
+    return data||[];
+  },
+  async updateStorySubmission(id, patch){
+    patch.updated_at = new Date().toISOString();
+    const { error } = await sbClient.from('story_submissions').update(patch).eq('id',id);
+    if(error) throw error;
+    },
+  // 재업로드 링크 화면용 — 호칭·단계만 돌려주는 security definer 함수
+  async storyByToken(token){
+    if(!CONFIGURED) return null;
+    const { data, error } = await sbAnon.rpc('story_by_token', { p_token: token });
+    if(error) throw error;
+    return (data && data[0]) || null;
+  },
+  // 토큰이 가리키는 사연에 결과지를 붙인다
+  async attachStoryReport(token, path){
+    if(!CONFIGURED) throw new Error('NOT_CONFIGURED');
+    const { data, error } = await sbAnon.rpc('attach_story_report', { p_token: token, p_path: path });
+    if(error) throw error;
+    return data === true;
   }
 };
 
@@ -1044,11 +1078,13 @@ function initAdmin(){
     $('#panelBookings').hidden = tab!=='bookings';
     $('#panelReports').hidden = tab!=='reports';
     $('#panelPairReports').hidden = tab!=='pairReports';
+    $('#panelStories').hidden = tab!=='stories';
     $('#panelBlocks').hidden = tab!=='blocks';
     if(tab==='bookings') loadBookings();
     if(tab==='blocks') loadBlocks();
     if(tab==='reports') loadReportOrders();
     if(tab==='pairReports') loadPairReportOrders();
+    if(tab==='stories') loadStorySubmissions();
   }));
   $$('#statusFilter .fbtn').forEach(b=> b.addEventListener('click', ()=>{
     $$('#statusFilter .fbtn').forEach(x=>x.classList.remove('active')); b.classList.add('active');
@@ -1061,6 +1097,10 @@ function initAdmin(){
   $$('#pairReportStatusFilter .fbtn').forEach(b=> b.addEventListener('click', ()=>{
     $$('#pairReportStatusFilter .fbtn').forEach(x=>x.classList.remove('active')); b.classList.add('active');
     currentPairReportFilter=b.dataset.status; renderPairReportOrders();
+  }));
+  $$('#storyStatusFilter .fbtn').forEach(b=> b.addEventListener('click', ()=>{
+    $$('#storyStatusFilter .fbtn').forEach(x=>x.classList.remove('active')); b.classList.add('active');
+    currentStoryFilter=b.dataset.status; renderStorySubmissions();
   }));
   $('#calPrev').addEventListener('click', ()=> shiftMonth(-1));
   $('#calNext').addEventListener('click', ()=> shiftMonth(1));
@@ -1781,16 +1821,457 @@ function buildMail(b, type='received'){
     + '&body=' + encodeURIComponent(lines.join('\n'));
 }
 
+
+/* =========================================================
+   강점 상담소 · 이야기 접수 폼 (story-apply.html)
+
+   강점 결과지 확보 경로가 셋이고, 그에 따라 저장 방식이 갈린다.
+     has_report : 파일을 올리고 anon 이 바로 INSERT           (결제 없음)
+     paid       : 50,000원 결제 후 verify-payment 가 INSERT   (RLS가 anon의 'paid' 저장을 막는다)
+     free_draw  : 결과지 없이 anon 이 바로 INSERT            (매달 2명 무료 추첨 대상)
+   ========================================================= */
+const STORY_SUBMIT_LABEL_FREE = '이야기 보내기';
+const STORY_SUBMIT_LABEL_PAID = '결제하고 보내기';
+const STORY_MIN_LEN = 100;                 // 강점으로 읽어내려면 최소한의 서술이 필요하다
+const STORY_CODE_PRICE = 50000;            // 강점 진단 코드 — verify-payment 의 STORY_CODE_PRICE 와 같아야 한다
+const SITE_BASE = 'https://mirahuve.com';  // 메일에 담는 업로드 링크는 항상 실제 도메인으로
+let storyEntry = null;                     // has_report | paid | free_draw
+
+function storySubmitLabel(){ return storyEntry === 'paid' ? STORY_SUBMIT_LABEL_PAID : STORY_SUBMIT_LABEL_FREE; }
+
+function initStoryForm(){
+  $$('#strengthPick .spick').forEach(b=> b.addEventListener('click', ()=>{
+    $$('#strengthPick .spick').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    storyEntry = b.dataset.entry;
+    $('#stReportWrap').hidden = storyEntry !== 'has_report';
+    $('#stPaidWrap').hidden   = storyEntry !== 'paid';
+    $('#stDrawWrap').hidden   = storyEntry !== 'free_draw';
+    if(storyEntry !== 'has_report') $('#stReportFile').value = '';
+    $('#storySubmitBtn').textContent = storySubmitLabel();
+  }));
+
+  const ta = $('#stStory'), cnt = $('#storyCount');
+  const syncCount = ()=> cnt.textContent = `${ta.value.length} / 3000자`;
+  ta.addEventListener('input', syncCount); syncCount();
+
+  // 이야기 철회 안내 메일 — 주소를 평문으로 두지 않는다(다른 화면과 동일한 방식)
+  const wd = $('#withdrawMail');
+  if(wd) wd.href = 'mailto:mira@mirahuve.com?subject=' + encodeURIComponent('[강점 상담소] 사연 삭제 요청');
+
+  $('#storyForm').addEventListener('submit', submitStory);
+  $('#storySubmitBtn').textContent = storySubmitLabel();
+}
+
+async function submitStory(ev){
+  ev.preventDefault();
+  const msg = $('#storyFormMsg'); msg.className='form-msg'; msg.textContent='';
+
+  const nickname = $('#stNickname').value.trim();
+  const email    = $('#stEmail').value.trim();
+  const story    = $('#stStory').value.trim();
+  const question = $('#stQuestion').value.trim();
+
+  if(story.length < STORY_MIN_LEN)
+    return fail(msg,`이야기를 조금만 더 적어주세요. ${STORY_MIN_LEN}자 이상이면 강점으로 읽어드리기 좋습니다. (현재 ${story.length}자)`);
+  if(!question)           return fail(msg,'가장 듣고 싶은 질문 한 가지를 적어주세요.');
+  if(!nickname || !email) return fail(msg,'영상에서 불릴 호칭과 이메일을 입력해 주세요.');
+  if(!storyEntry)         return fail(msg,'강점 결과지 여부를 골라주세요.');
+  if(!$('#stConsentBroadcast').checked)
+    return fail(msg,'이야기를 가명으로 소개하는 데 동의해 주셔야 접수할 수 있습니다.');
+  if(!$('#stConsentPrivacy').checked)
+    return fail(msg,'개인정보 수집·이용에 동의해 주셔야 접수할 수 있습니다.');
+
+  const file = $('#stReportFile').files[0] || null;
+  if(storyEntry === 'has_report' && !file)
+    return fail(msg,'강점 진단 결과지를 올려주세요.');
+
+  const payName  = $('#stName').value.trim();
+  const payPhone = $('#stPhone').value.trim();
+  if(storyEntry === 'paid' && (!payName || !payPhone))
+    return fail(msg,'결제를 위해 이름과 연락처를 입력해 주세요.');
+
+  const row = {
+    nickname,
+    contact_email: email,
+    story,
+    question,
+    age_band: $('#stAge').value || null,
+    job_band: $('#stJob').value.trim() || null,
+    entry_type: storyEntry,
+    has_report: storyEntry === 'has_report',
+    report_stage: storyEntry === 'has_report' ? 'ready' : 'none',
+    consent_broadcast: true,
+    consent_privacy: true,
+    consent_research: $('#stConsentResearch').checked,
+    status: 'received'
+  };
+
+  const btn = $('#storySubmitBtn'); btn.disabled = true; btn.textContent = '접수 중…';
+  try{
+    if(storyEntry === 'has_report'){
+      btn.textContent = '결과지 업로드 중…';
+      try{ row.report_path = await db.uploadReport(file); }
+      catch(ue){ btn.disabled=false; btn.textContent=storySubmitLabel(); return fail(msg, uploadErrText(ue)); }
+      row.report_uploaded_at = new Date().toISOString();
+      btn.textContent = '접수 중…';
+      await db.createStorySubmission(row);
+    }
+    else if(storyEntry === 'paid'){
+      row.applicant_name  = payName;
+      row.applicant_phone = payPhone;
+      row.pay_method = selectedPayMethod;
+      btn.textContent = '결제 진행 중…';
+      stashPendingOrder('story', row);          // 모바일 리다이렉트 복귀용
+      try{
+        const pay = await requestPortonePayment({
+          amount: STORY_CODE_PRICE, orderName: '미라휴브 강점 진단 코드',
+          customer: { name: payName, phone: payPhone, email }
+        });
+        row.payment_id = pay.paymentId;
+      }catch(pe){
+        clearPendingOrder();
+        btn.disabled=false; btn.textContent=storySubmitLabel();
+        if(pe.message==='CHANNEL_NOT_SET' || pe.message==='PORTONE_SDK_MISSING')
+          return fail(msg,'결제 설정이 아직 완료되지 않았습니다. 잠시 후 다시 시도해 주세요.');
+        return fail(msg,'결제가 취소되었거나 완료되지 않았습니다. 다시 시도해 주세요.');
+      }
+      btn.textContent = '결제 확인 중…';
+      await verifyAndSave('story', row);
+      clearPendingOrder();
+    }
+    else {
+      await db.createStorySubmission(row);      // free_draw
+    }
+
+    const okText = storyStatusText(storyEntry);
+    msg.className='form-msg ok';
+    msg.textContent = okText;
+    showNotice(okText);
+    resetStoryForm();
+  }catch(err){
+    if(err && err.message==='NOT_CONFIGURED') fail(msg,'접수 설정이 아직 완료되지 않았습니다. 잠시 후 다시 시도해 주세요.');
+    else if(storyEntry==='paid') fail(msg,'결제는 완료되었지만 접수 저장 중 오류가 발생했습니다. 010-5205-5870 또는 mira@mirahuve.com으로 연락 주시면 바로 도와드리겠습니다.');
+    else { fail(msg,'접수 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.'); console.error(err); }
+    console.error(err);
+  }finally{ btn.disabled=false; btn.textContent=storySubmitLabel(); }
+}
+
+/* 접수 경로별 완료 안내 — 다음에 무엇이 일어나는지를 알려준다 */
+function storyStatusText(entry){
+  if(entry === 'has_report')
+    return '이야기와 결과지를 잘 받았습니다. 읽어보고 영상으로 다루게 되면 이메일로 먼저 연락드릴게요. 고맙습니다.';
+  if(entry === 'paid')
+    return '결제가 완료되었습니다. 강점 진단 코드와 결과지 업로드 링크를 이메일로 곧 보내드릴게요. 고맙습니다.';
+  return '이야기를 잘 받았습니다. 매달 두 분께 무료 진단을 보내드리는데, 뽑히시면 이메일로 연락드릴게요. 고맙습니다.';
+}
+
+function resetStoryForm(){
+  $('#storyForm').reset();
+  storyEntry = null;
+  $$('#strengthPick .spick').forEach(x=>x.classList.remove('active'));
+  $('#stReportWrap').hidden = true;
+  $('#stPaidWrap').hidden   = true;
+  $('#stDrawWrap').hidden   = true;
+  $('#storyCount').textContent = '0 / 3000자';
+  $('#storySubmitBtn').textContent = storySubmitLabel();
+}
+
+/* =========================================================
+   강점 상담소 · 결과지 재업로드 (story-upload.html)
+   진단 코드를 받아 테스트를 마친 뒤, 메일의 개인 링크로 돌아와 파일만 올린다.
+   anon 은 story_submissions 를 읽지도 수정하지도 못하므로 토큰 RPC 두 개로만 동작한다.
+   ========================================================= */
+let uploadToken = null;
+
+async function initStoryUpload(){
+  const hm = $('#helpMail');
+  if(hm) hm.href = 'mailto:mira@mirahuve.com?subject=' + encodeURIComponent('[강점 상담소] 결과지 업로드 링크 문의');
+
+  uploadToken = new URLSearchParams(location.search).get('t');
+  const show = id => { ['upLoading','upInvalid','upAlready','upSuccess'].forEach(x=> $('#'+x).hidden = true); if(id) $('#'+id).hidden = false; };
+
+  if(!uploadToken || !CONFIGURED){ show('upInvalid'); return; }
+  try{
+    const info = await db.storyByToken(uploadToken);
+    if(!info){ show('upInvalid'); return; }
+    show(info.report_stage === 'ready' ? 'upAlready' : null);
+    $('#upGreeting').textContent = `${info.nickname} 님, 강점 진단을 마치셨군요. 결과지 파일을 올려주세요.`;
+    $('#uploadForm').hidden = false;
+    $('#uploadForm').addEventListener('submit', submitStoryUpload);
+  }catch(e){ console.error(e); show('upInvalid'); }
+}
+
+async function submitStoryUpload(ev){
+  ev.preventDefault();
+  const msg = $('#upFormMsg'); msg.className='form-msg'; msg.textContent='';
+  const file = $('#upFile').files[0] || null;
+  if(!file) return fail(msg,'결과지 파일을 선택해 주세요.');
+
+  const btn = $('#upSubmitBtn'); btn.disabled = true; btn.textContent='올리는 중…';
+  try{
+    const path = await db.uploadReport(file);
+    const ok = await db.attachStoryReport(uploadToken, path);
+    if(!ok){ btn.disabled=false; btn.textContent='결과지 올리기'; return fail(msg,'링크가 올바르지 않습니다. 메일로 보내드린 주소를 다시 확인해 주세요.'); }
+    $('#uploadForm').hidden = true;
+    $('#upAlready').hidden = true;
+    $('#upSuccess').hidden = false;
+    $('#upSuccess').scrollIntoView({ block:'center' });
+  }catch(e){
+    fail(msg, uploadErrText(e));
+    btn.disabled=false; btn.textContent='결과지 올리기';
+  }
+}
+
+/* =========================================================
+   강점 상담소 · 사연 관리 (어드민)
+   ========================================================= */
+const STORY_STATUS_LABEL = { received:'접수', shortlisted:'후보', selected:'채택', aired:'공개완료', declined:'반려' };
+const STORY_STAGE_LABEL  = { none:'결과지 없음', paid:'결제완료 · 코드 대기', code_sent:'코드 발송함', ready:'결과지 도착' };
+const STORY_ENTRY_LABEL  = { has_report:'결과지 보유', paid:'진단 구매', free_draw:'무료 추첨 대기' };
+let allStorySubmissions = [];
+let currentStoryFilter = 'all';
+
+async function loadStorySubmissions(){
+  const list=$('#storyList'); list.innerHTML='<p class="muted">불러오는 중…</p>';
+  if(!CONFIGURED){ list.innerHTML='<p class="muted">Supabase 키 입력 후 이용할 수 있습니다.</p>'; return; }
+  try{ allStorySubmissions = await db.listStorySubmissions(); renderStorySubmissions(); }
+  catch(e){ list.innerHTML='<p class="muted">불러오기 실패. 테이블/키 설정을 확인해 주세요.</p>'; console.error(e); }
+}
+
+function renderStorySubmissions(){
+  const list=$('#storyList');
+  let rows = allStorySubmissions;
+  if(currentStoryFilter === 'draw')                       // 이번 달 무료 추첨 후보
+    rows = rows.filter(s=> s.entry_type==='free_draw' && !s.draw_won_at && s.report_stage==='none' && s.status!=='declined');
+  else if(currentStoryFilter !== 'all')
+    rows = rows.filter(s=> s.status===currentStoryFilter);
+  if(!rows.length){ list.innerHTML='<p class="muted">해당하는 사연이 없습니다.</p>'; return; }
+  list.innerHTML='';
+  rows.forEach(s=> list.appendChild(storySubmissionCard(s)));
+}
+
+/* 사연 한 건을 브레인 세션에 붙여넣기 좋은 평문으로 만든다 — 신원 정보는 넣지 않는다 */
+function storyPlainText(s){
+  return [
+    `[강점 상담소 사연]`,
+    `호칭 : ${s.nickname||''}`,
+    `맥락 : ${[s.age_band, s.job_band].filter(Boolean).join(' · ') || '미기재'}`,
+    `결과지 : ${s.report_stage==='ready' ? '있음' : STORY_STAGE_LABEL[s.report_stage]||s.report_stage}`,
+    `연구 축적 동의 : ${s.consent_research ? '예' : '아니오'}`,
+    ``,
+    `듣고 싶은 질문 : ${s.question||''}`,
+    ``,
+    `이야기 :`,
+    s.story||''
+  ].join('\n');
+}
+
+function storyUploadLink(s){ return `${SITE_BASE}/story-upload.html?t=${s.upload_token}`; }
+
+function storySubmissionCard(s){
+  const ctx = [s.age_band, s.job_band].filter(Boolean).join(' · ');
+  const stage = s.report_stage || 'none';
+  const stageLine = stage==='ready'
+    ? `<div class="bk-prep ok">📎 결과지 도착</div>`
+    : `<div class="bk-prep wait">· ${STORY_STAGE_LABEL[stage]||stage}</div>`;
+  const researchLine = s.consent_research
+    ? `<div class="bk-prep ok">🗄 연구 축적 동의 — 위키 인제스트 가능</div>`
+    : `<div class="bk-prep wait">🗄 연구 축적 미동의 — 위키에 넣지 않는다</div>`;
+  const paidLine = s.payment_status==='paid'
+    ? `<div class="bk-price">💳 <strong>${won(s.price||STORY_CODE_PRICE)}</strong> · <span style="color:#1a7a4a;font-weight:600;">결제완료</span>${s.applicant_name ? ' · '+esc(s.applicant_name)+(s.applicant_phone ? ' · '+esc(s.applicant_phone) : '') : ''}</div>`
+    : '';
+  const drawLine = s.draw_won_at ? `<div class="bk-prep ok">🎁 무료 추첨 당첨</div>` : '';
+  const repBtn  = s.report_path ? `<button class="mini-btn ghost act-report">결과지 열기</button>` : '';
+  const drawBtn = (s.entry_type==='free_draw' && !s.draw_won_at) ? `<button class="mini-btn act-draw">무료 추첨 당첨 처리</button>` : '';
+
+  const el=document.createElement('div');
+  el.className=`bk-card s-${s.status}`;
+  el.innerHTML = `
+    <div class="bk-top">
+      <div>
+        <div class="bk-name">${esc(s.nickname)}</div>
+        <div class="bk-svc">강점 상담소 · ${STORY_ENTRY_LABEL[s.entry_type]||s.entry_type||'—'}${s.episode_no ? ' · '+esc(s.episode_no) : ''}</div>
+      </div>
+      <span class="bk-badge">${STORY_STATUS_LABEL[s.status]||s.status}</span>
+    </div>
+    ${appliedAtHtml(s)}
+    <div class="bk-contact">${esc(s.contact_email)}${ctx ? ' · '+esc(ctx) : ''}</div>
+    <div class="bk-question">❝ ${esc(s.question)} ❞</div>
+    <div class="bk-story">${esc(s.story).replace(/\n/g,'<br>')}</div>
+    ${paidLine}
+    ${stageLine}
+    ${drawLine}
+    ${researchLine}
+    <div class="bk-actions">
+      <select class="st-sel" title="제작 단계">
+        ${['received','shortlisted','selected','aired','declined'].map(v=>`<option value="${v}" ${v===s.status?'selected':''}>${STORY_STATUS_LABEL[v]}</option>`).join('')}
+      </select>
+      <select class="stage-sel" title="결과지 단계">
+        ${['none','paid','code_sent','ready'].map(v=>`<option value="${v}" ${v===stage?'selected':''}>${STORY_STAGE_LABEL[v]}</option>`).join('')}
+      </select>
+      <button class="mini-btn act-copy">사연 복사</button>
+      <button class="mini-btn act-mail-code">코드 발송 메일</button>
+      <button class="mini-btn ghost act-mail-select">선정 안내 메일</button>
+      <button class="mini-btn ghost act-mail-thanks">접수 확인 메일</button>
+      ${drawBtn}
+      ${repBtn}
+    </div>
+    <div class="bk-memo">
+      <input type="text" class="st-ep" placeholder="SC 번호 (예: SC01)" value="${esc(s.episode_no||'')}">
+      <textarea rows="2" placeholder="제작 메모…">${esc(s.memo||'')}</textarea>
+      <button class="mini-btn ghost act-memo" style="margin-top:6px;">메모 · 번호 저장</button>
+    </div>`;
+
+  el.querySelector('.st-sel').addEventListener('change', async e=>{
+    const ns=e.target.value;
+    try{
+      await db.updateStorySubmission(s.id,{status:ns}); s.status=ns;
+      el.className=`bk-card s-${s.status}`;
+      el.querySelector('.bk-badge').textContent=STORY_STATUS_LABEL[s.status];
+      if(ns==='selected'){                                   // 채택 시 선정 안내 메일 작성창을 바로 연다
+        const w = window.open(buildStoryMail(s,'selected'), '_blank');
+        if(!w) alert('선정 안내 메일 작성창이 팝업 차단되었습니다. 팝업을 허용한 뒤 "선정 안내 메일" 버튼으로 다시 열 수 있습니다.');
+      }
+      renderStorySubmissions();
+    }catch(err){ alert('상태 변경 실패'); console.error(err); }
+  });
+
+  el.querySelector('.stage-sel').addEventListener('change', async e=>{
+    const ns=e.target.value;
+    const patch = { report_stage: ns };
+    if(ns==='code_sent' && !s.code_sent_at) patch.code_sent_at = new Date().toISOString();
+    try{
+      await db.updateStorySubmission(s.id, patch);
+      Object.assign(s, patch);
+      renderStorySubmissions();
+    }catch(err){ alert('결과지 단계 변경 실패'); console.error(err); }
+  });
+
+  el.querySelector('.act-copy').addEventListener('click', async ()=>{
+    const btn = el.querySelector('.act-copy');
+    try{ await navigator.clipboard.writeText(storyPlainText(s)); flash(btn,'복사됨'); }
+    catch(e){ alert('복사에 실패했습니다. 사연 내용을 직접 선택해 복사해 주세요.'); console.error(e); }
+  });
+
+  el.querySelector('.act-memo').addEventListener('click', async ()=>{
+    const memo = el.querySelector('textarea').value;
+    const ep   = el.querySelector('.st-ep').value.trim() || null;
+    try{
+      await db.updateStorySubmission(s.id,{memo, episode_no:ep});
+      s.memo=memo; s.episode_no=ep;
+      flash(el.querySelector('.act-memo'),'저장됨');
+    }catch(err){ alert('저장 실패'); console.error(err); }
+  });
+
+  el.querySelector('.act-mail-code').addEventListener('click', ()=>{
+    const w = window.open(buildStoryMail(s,'code'), '_blank');
+    if(!w) alert('팝업이 차단되었습니다. 브라우저에서 이 사이트의 팝업을 허용하면 메일 작성창이 열립니다.');
+  });
+  el.querySelector('.act-mail-select').addEventListener('click', ()=>{
+    const w = window.open(buildStoryMail(s,'selected'), '_blank');
+    if(!w) alert('팝업이 차단되었습니다. 브라우저에서 이 사이트의 팝업을 허용하면 메일 작성창이 열립니다.');
+  });
+  el.querySelector('.act-mail-thanks').addEventListener('click', ()=>{
+    const w = window.open(buildStoryMail(s,'received'), '_blank');
+    if(!w) alert('팝업이 차단되었습니다. 브라우저에서 이 사이트의 팝업을 허용하면 메일 작성창이 열립니다.');
+  });
+
+  const drawEl = el.querySelector('.act-draw');
+  if(drawEl) drawEl.addEventListener('click', async ()=>{
+    if(!confirm(`${s.nickname} 님을 이번 달 무료 진단 당첨자로 처리할까요?\n처리 후 "코드 발송 메일"로 코드와 업로드 링크를 보내주세요.`)) return;
+    const patch = { draw_won_at: new Date().toISOString() };
+    try{ await db.updateStorySubmission(s.id, patch); Object.assign(s, patch); renderStorySubmissions(); }
+    catch(err){ alert('당첨 처리 실패'); console.error(err); }
+  });
+
+  const repEl = el.querySelector('.act-report');
+  if(repEl) repEl.addEventListener('click', async ()=>{
+    repEl.disabled=true; const t=repEl.textContent; repEl.textContent='여는 중…';
+    try{ const url = await db.reportSignedUrl(s.report_path); window.open(url,'_blank'); }
+    catch(e){ alert('결과지를 열 수 없습니다. Storage 설정을 확인해 주세요.'); console.error(e); }
+    finally{ repEl.disabled=false; repEl.textContent=t; }
+  });
+
+  return el;
+}
+
+/* 사연자 안내 메일(Gmail compose) — 접수 확인 / 코드 발송 / 선정 안내 */
+function buildStoryMail(s, type='received'){
+  const name = s.nickname || '';
+  let subject, lines;
+
+  if(type==='code'){                       // 진단 코드 + 결과지 업로드 링크
+    const why = s.draw_won_at
+      ? `보내주신 이야기가 이번 달 무료 강점 진단에 당첨되셨습니다. 축하드립니다!`
+      : `신청해 주신 갤럽 강점 진단(CliftonStrengths) 코드를 보내드립니다.`;
+    subject = '[MIRA HUVE] 강점 진단 코드와 결과지 업로드 링크입니다';
+    lines = [
+      `안녕하세요, ${name} 님.`,
+      why,
+      ``,
+      `① 아래 사이트에서 코드를 입력해 진단을 진행해 주세요.`,
+      `   갤럽 강점 사이트 · https://my.gallup.com`,
+      `   액세스 코드 · {발급받은 코드 입력}`,
+      `   (30~40분 정도 방해받지 않는 시간이 필요합니다.)`,
+      ``,
+      `② 진단을 마치신 뒤, 34개 전체 결과지를 아래 링크에서 올려주세요.`,
+      `   ${storyUploadLink(s)}`,
+      `   이야기를 다시 쓰실 필요는 없습니다 — 결과지만 올려주시면 됩니다.`,
+      ``,
+      `결과지가 도착하면 보내주신 이야기를 강점으로 읽어보고, 영상으로 다루게 되면 미리 연락드릴게요.`,
+      ``,
+      `세상은 바꿀 수 없지만, 당신의 세상은 바꿀 수 있습니다.`,
+      `MIRA HUVE`
+    ];
+  }
+  else if(type==='selected'){
+    subject = '[MIRA HUVE] 강점 상담소에서 이야기를 다루게 되었습니다';
+    lines = [
+      `안녕하세요, ${name} 님.`,
+      `보내주신 이야기를 강점 상담소에서 다루게 되었습니다.`,
+      ``,
+      `영상에서는 적어주신 호칭을 가명으로 쓰고, 회사·학교·지역처럼 신원이 드러날 수 있는 내용은 바꾸거나 지웁니다.`,
+      `공개 전에 소개할 내용을 미리 보여드릴 수 있으니, 원하시면 이 메일로 알려주세요.`,
+      ``,
+      `세상은 바꿀 수 없지만, 당신의 세상은 바꿀 수 있습니다.`,
+      `MIRA HUVE`
+    ];
+  }
+  else {
+    subject = '[MIRA HUVE] 강점 상담소에 보내주신 이야기를 받았습니다';
+    lines = [
+      `안녕하세요, ${name} 님.`,
+      `강점 상담소에 보내주신 이야기를 잘 받았습니다.`,
+      ``,
+      `보내주신 이야기는 하나하나 읽고 있습니다. 다만 모든 이야기를 영상으로 만들지는 못해,`,
+      `다루게 되는 경우에만 제작 전에 이 메일로 먼저 연락드립니다.`,
+      ``,
+      `용기 내어 이야기를 보내주셔서 고맙습니다.`,
+      ``,
+      `세상은 바꿀 수 없지만, 당신의 세상은 바꿀 수 있습니다.`,
+      `MIRA HUVE`
+    ];
+  }
+
+  return 'https://mail.google.com/mail/?view=cm&fs=1'
+    + '&to=' + encodeURIComponent(s.contact_email)
+    + '&su=' + encodeURIComponent(subject)
+    + '&body=' + encodeURIComponent(lines.join('\n'));
+}
+
 function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
 /* ---- 시작 ---- */
 document.addEventListener('DOMContentLoaded', ()=>{
-  // app.js는 index.html·report-apply.html·pair-report-apply.html이 공유한다 — 각 페이지에 실제로 있는 요소만 초기화한다
+  // app.js는 index.html·report-apply.html·pair-report-apply.html·story-apply.html·story-upload.html이 공유한다 — 각 페이지에 실제로 있는 요소만 초기화한다
   if($('#navToggle') || $('#navLinks')) initNav();
   if($('.domain-card')) initDomainFlip();
   if($('#bookingForm')) initBooking();
   if($('#reportOrderForm')) initReportOrder();
   if($('#pairOrderForm')) initPairReportOrder();
+  if($('#storyForm')) initStoryForm();
+  if($('#storyUpload')) initStoryUpload();
   if($('#payMethodPick')) initPayMethodPick();
   if($('#adminScreen')) initAdmin();
   // 이메일 mailto 조합 (평문 노출/난독화 방지)

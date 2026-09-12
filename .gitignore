@@ -1,0 +1,3 @@
+# Supabase CLI 로컬 캐시 (프로젝트 연결 정보) — 배포 대상 아님
+supabase/.temp/
+.DS_Store
