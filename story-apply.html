@@ -22,17 +22,6 @@
 .mini-head a.home:hover{border-color:var(--gold-light);}
 
 /* 선정자 무료 결과지 이벤트 — 접수의 가장 큰 이유이므로 눈에 띄게 */
-.story-event{
-  margin-top:26px;padding:20px 24px;border-radius:12px;
-  background:rgba(116,99,157,0.10);border:1px solid rgba(116,99,157,0.28);
-  text-align:center;
-}
-.story-event .se-tag{
-  display:inline-block;font-size:11px;letter-spacing:2px;font-weight:600;
-  color:var(--rust);border:1px solid rgba(90,77,122,0.35);border-radius:999px;padding:4px 14px;margin-bottom:10px;
-}
-.story-event p{font-size:14.5px;line-height:1.8;color:var(--deep);}
-.story-event strong{color:var(--rust);font-weight:700;}
 
 /* 다루지 않는 주제 안내 — 강점 해석의 범위 밖이라는 점을 접수 전에 분명히 알린다 */
 .story-safety{
@@ -43,7 +32,6 @@
 .story-safety b{color:var(--rust);}
 
 /* 이 페이지의 절차는 3단계 — 공용 4칸 그리드를 3칸으로 덮는다 (모바일 1칸 규칙은 건드리지 않는다) */
-@media(min-width:861px){ #storyApply .process-line{grid-template-columns:repeat(3,1fr);} }
 .strength-pick{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:22px;}
 .strength-pick .pick{padding:18px 12px;text-align:left;gap:6px;}
 .strength-pick .pick span{line-height:1.5;}
@@ -101,7 +89,7 @@
   <!-- 코너 절차 -->
   <div class="report-process">
     <h3 class="rp-title">진행 절차</h3>
-    <div class="process-line">
+    <div class="process-line three">
       <div class="proc-step">
         <div class="proc-dot">1</div>
         <h4>이야기 남기기</h4>
@@ -336,6 +324,7 @@
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.portone.io/v2/browser-sdk.js"></script>
 <script src="app.js?v=20260912a"></script>
 </body>
 </html>
