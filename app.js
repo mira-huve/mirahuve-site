@@ -400,8 +400,36 @@ function initDomainFlip(){
 
 function initNav(){
   const toggle = $('#navToggle'), links = $('#navLinks');
-  toggle?.addEventListener('click', ()=> links.classList.toggle('open'));
-  $$('#navLinks a').forEach(a=> a.addEventListener('click', ()=> links.classList.remove('open')));
+  toggle?.setAttribute('aria-expanded','false');
+  toggle?.addEventListener('click', ()=>{
+    links.classList.toggle('open');
+    toggle.setAttribute('aria-expanded', links.classList.contains('open') ? 'true' : 'false');
+  });
+  $$('#navLinks a').forEach(a=> a.addEventListener('click', ()=>{
+    links.classList.remove('open');
+    toggle?.setAttribute('aria-expanded','false');
+  }));
+
+  // 스크롤하면 헤더 배경을 진하게 — 밝은 본문 위에서도 메뉴가 또렷하게 보이도록
+  const nav = $('#nav');
+  if(nav){
+    const onScroll = ()=> nav.classList.toggle('scrolled', window.scrollY > 40);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive:true });
+  }
+
+  // 지금 보고 있는 섹션을 상단 메뉴에 표시
+  const anchors = $$('#navLinks a[href^="#"]');
+  const targets = anchors.map(a=> document.querySelector(a.getAttribute('href'))).filter(Boolean);
+  if(targets.length){
+    const navIo = new IntersectionObserver(entries=>{
+      entries.forEach(e=>{
+        if(!e.isIntersecting) return;
+        anchors.forEach(a=> a.classList.toggle('active', a.getAttribute('href') === '#' + e.target.id));
+      });
+    }, { rootMargin:'-45% 0px -50% 0px' });
+    targets.forEach(t=> navIo.observe(t));
+  }
 
   const io = new IntersectionObserver(entries=>{
     entries.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add('visible'); io.unobserve(e.target); } });
