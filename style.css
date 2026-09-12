@@ -38,9 +38,6 @@ a{color:inherit;text-decoration:none;}
 .nav-links a:hover{color:var(--gold-light);}
 .nav-links a.active{color:var(--gold-light);}
 .nav-links a.active::after{content:"";position:absolute;left:0;right:0;bottom:-7px;height:1px;background:var(--gold-light);opacity:.65;}
-/* 다른 페이지로 나가는 항목은 앵커 메뉴와 구분한다 */
-.nav-links a.nav-page{padding-left:24px;}
-.nav-links a.nav-page::before{content:"";position:absolute;left:0;top:50%;transform:translateY(-50%);width:1px;height:12px;background:rgba(183,167,214,0.28);}
 .nav-cta{
   border:1px solid var(--gold);border-radius:999px;
   padding:7px 18px;color:var(--gold-light) !important;font-weight:400 !important;
@@ -250,7 +247,7 @@ a{color:inherit;text-decoration:none;}
 .d-strat h3{color:var(--strat);}
 
 /* ============ SERVICES ============ */
-.services{background:var(--paper);}
+.services{background:var(--paper);border-bottom:1px solid rgba(13,20,36,0.07);}
 .prereq-banner{
   margin-top:28px;background:rgba(90,77,122,0.08);border:1px solid rgba(90,77,122,0.2);
   border-radius:6px;padding:14px 20px;font-size:14px;color:var(--rust);line-height:1.6;
@@ -449,6 +446,9 @@ footer .small{font-size:10px;letter-spacing:0.3em;margin-top:20px;opacity:0.8;fo
 .hist-when{font-weight:600;}
 .hist-meta{font-size:12px;opacity:0.7;margin-top:3px;}
 
+/* ============ 강점 상담소 ============ */
+.counsel{background:var(--paper);}
+
 /* '매달 2분' 이벤트 안내 — 사연 접수 페이지 인라인에 있던 것을 공용으로 옮겼다 */
 .story-event{
   margin-top:26px;padding:20px 24px;border-radius:12px;
@@ -473,8 +473,6 @@ footer .small{font-size:10px;letter-spacing:0.3em;margin-top:20px;opacity:0.8;fo
   }
   .nav-links.open{max-height:calc(100vh - 70px);max-height:calc(100dvh - 70px);overflow-y:auto;overscroll-behavior:contain;}
   .nav-links a{padding:15px 24px;font-size:15px;border-top:1px solid rgba(183,167,214,0.08);}
-  .nav-links a.nav-page{padding-left:24px;}
-  .nav-links a.nav-page::before{display:none;}
   .nav-links a.active::after{display:none;}
   .nav-cta{margin:14px 24px;text-align:center;}
   .hero{padding:110px 22px 80px;}
