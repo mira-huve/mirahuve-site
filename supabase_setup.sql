@@ -194,8 +194,8 @@ create policy "admin full access pair_report_orders"
   using (true) with check (true);
 
 -- ============================================================
---  7) 강점 상담소 사연 접수(story_submissions) 테이블 + 정책
---     유튜브 코너 "강점 상담소"에 시청자가 고민 사연을 보내는 폼.
+--  7) 고강도 사연 접수(story_submissions) 테이블 + 정책
+--     유튜브 코너 "고강도"에 시청자가 고민 사연을 보내는 폼.
 --     사연 본문은 민감정보에 가까우므로 anon은 INSERT만 하고 읽지 못한다.
 --
 --     접수 경로 3가지 (entry_type)

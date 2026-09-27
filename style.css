@@ -446,7 +446,7 @@ footer .small{font-size:10px;letter-spacing:0.3em;margin-top:20px;opacity:0.8;fo
 .hist-when{font-weight:600;}
 .hist-meta{font-size:12px;opacity:0.7;margin-top:3px;}
 
-/* ============ 강점 상담소 ============ */
+/* ============ 고강도 ============ */
 .counsel{background:var(--paper);}
 
 /* '매달 2분' 이벤트 안내 — 사연 접수 페이지 인라인에 있던 것을 공용으로 옮겼다 */
@@ -494,7 +494,7 @@ footer .small{font-size:10px;letter-spacing:0.3em;margin-top:20px;opacity:0.8;fo
 @media (max-width:520px){ .paymethod-pick{grid-template-columns:1fr;} }
 .bk-applied{font-size:12px;opacity:0.55;margin-top:2px;}
 
-/* ---- 강점 상담소 사연 카드(어드민) ---- */
+/* ---- 고강도 사연 카드(어드민) ---- */
 .bk-card.s-received{border-left-color:var(--key-blue);}
 .bk-card.s-shortlisted{border-left-color:var(--gold);}
 .bk-card.s-selected{border-left-color:#1a7a4a;}

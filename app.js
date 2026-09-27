@@ -1851,7 +1851,7 @@ function buildMail(b, type='received'){
 
 
 /* =========================================================
-   강점 상담소 · 이야기 접수 폼 (story-apply.html)
+   고강도 · 이야기 접수 폼 (story-apply.html)
 
    강점 결과지 확보 경로가 셋이고, 그에 따라 저장 방식이 갈린다.
      has_report : 파일을 올리고 anon 이 바로 INSERT           (결제 없음)
@@ -1885,7 +1885,7 @@ function initStoryForm(){
 
   // 이야기 철회 안내 메일 — 주소를 평문으로 두지 않는다(다른 화면과 동일한 방식)
   const wd = $('#withdrawMail');
-  if(wd) wd.href = 'mailto:mira@mirahuve.com?subject=' + encodeURIComponent('[강점 상담소] 사연 삭제 요청');
+  if(wd) wd.href = 'mailto:mira@mirahuve.com?subject=' + encodeURIComponent('[고강도] 사연 삭제 요청');
 
   $('#storyForm').addEventListener('submit', submitStory);
   $('#storySubmitBtn').textContent = storySubmitLabel();
@@ -2006,7 +2006,7 @@ function resetStoryForm(){
 }
 
 /* =========================================================
-   강점 상담소 · 결과지 재업로드 (story-upload.html)
+   고강도 · 결과지 재업로드 (story-upload.html)
    진단 코드를 받아 테스트를 마친 뒤, 메일의 개인 링크로 돌아와 파일만 올린다.
    anon 은 story_submissions 를 읽지도 수정하지도 못하므로 토큰 RPC 두 개로만 동작한다.
    ========================================================= */
@@ -2014,7 +2014,7 @@ let uploadToken = null;
 
 async function initStoryUpload(){
   const hm = $('#helpMail');
-  if(hm) hm.href = 'mailto:mira@mirahuve.com?subject=' + encodeURIComponent('[강점 상담소] 결과지 업로드 링크 문의');
+  if(hm) hm.href = 'mailto:mira@mirahuve.com?subject=' + encodeURIComponent('[고강도] 결과지 업로드 링크 문의');
 
   uploadToken = new URLSearchParams(location.search).get('t');
   const show = id => { ['upLoading','upInvalid','upAlready','upSuccess'].forEach(x=> $('#'+x).hidden = true); if(id) $('#'+id).hidden = false; };
@@ -2052,7 +2052,7 @@ async function submitStoryUpload(ev){
 }
 
 /* =========================================================
-   강점 상담소 · 사연 관리 (어드민)
+   고강도 · 사연 관리 (어드민)
    ========================================================= */
 const STORY_STATUS_LABEL = { received:'접수', shortlisted:'후보', selected:'채택', aired:'공개완료', declined:'반려' };
 const STORY_STAGE_LABEL  = { none:'결과지 없음', paid:'결제완료 · 코드 대기', code_sent:'코드 발송함', ready:'결과지 도착' };
@@ -2101,7 +2101,7 @@ function renderStorySubmissions(){
 /* 사연 한 건을 브레인 세션에 붙여넣기 좋은 평문으로 만든다 — 신원 정보는 넣지 않는다 */
 function storyPlainText(s){
   return [
-    `[강점 상담소 사연]`,
+    `[고강도 사연]`,
     `호칭 : ${s.nickname||''}`,
     `맥락 : ${[s.age_band, s.job_band].filter(Boolean).join(' · ') || '미기재'}`,
     `결과지 : ${s.report_stage==='ready' ? '있음' : STORY_STAGE_LABEL[s.report_stage]||s.report_stage}`,
@@ -2138,7 +2138,7 @@ function storySubmissionCard(s){
     <div class="bk-top">
       <div>
         <div class="bk-name">${esc(s.nickname)}</div>
-        <div class="bk-svc">강점 상담소 · ${STORY_ENTRY_LABEL[s.entry_type]||s.entry_type||'—'}${s.episode_no ? ' · '+esc(s.episode_no) : ''}</div>
+        <div class="bk-svc">고강도 · ${STORY_ENTRY_LABEL[s.entry_type]||s.entry_type||'—'}${s.episode_no ? ' · '+esc(s.episode_no) : ''}</div>
       </div>
       <span class="bk-badge">${STORY_STATUS_LABEL[s.status]||s.status}</span>
     </div>
@@ -2221,7 +2221,7 @@ function storySubmissionCard(s){
       s.memo=memo; s.episode_no=ep;
       epEl.value = ep || '';
       el.querySelector('.bk-svc').textContent =
-        `강점 상담소 · ${STORY_ENTRY_LABEL[s.entry_type]||s.entry_type||'—'}${s.episode_no ? ' · '+s.episode_no : ''}`;
+        `고강도 · ${STORY_ENTRY_LABEL[s.entry_type]||s.entry_type||'—'}${s.episode_no ? ' · '+s.episode_no : ''}`;
       flash(el.querySelector('.act-memo'),'저장됨');
     }catch(err){ alert('저장 실패'); console.error(err); }
   });
@@ -2288,10 +2288,10 @@ function buildStoryMail(s, type='received'){
     ];
   }
   else if(type==='selected'){
-    subject = '[MIRA HUVE] 강점 상담소에서 이야기를 다루게 되었습니다';
+    subject = '[MIRA HUVE] 고강도에서 이야기를 다루게 되었습니다';
     lines = [
       `안녕하세요, ${name} 님.`,
-      `보내주신 이야기를 강점 상담소에서 다루게 되었습니다.`,
+      `보내주신 이야기를 고강도에서 다루게 되었습니다.`,
       ``,
       `영상에서는 적어주신 호칭을 가명으로 쓰고, 회사·학교·지역처럼 신원이 드러날 수 있는 내용은 바꾸거나 지웁니다.`,
       `공개 전에 소개할 내용을 미리 보여드릴 수 있으니, 원하시면 이 메일로 알려주세요.`,
@@ -2301,10 +2301,10 @@ function buildStoryMail(s, type='received'){
     ];
   }
   else {
-    subject = '[MIRA HUVE] 강점 상담소에 보내주신 이야기를 받았습니다';
+    subject = '[MIRA HUVE] 고강도에 보내주신 이야기를 받았습니다';
     lines = [
       `안녕하세요, ${name} 님.`,
-      `강점 상담소에 보내주신 이야기를 잘 받았습니다.`,
+      `고강도에 보내주신 이야기를 잘 받았습니다.`,
       ``,
       `보내주신 이야기는 하나하나 읽고 있습니다. 다만 모든 이야기를 영상으로 만들지는 못해,`,
       `다루게 되는 경우에만 제작 전에 이 메일로 먼저 연락드립니다.`,
